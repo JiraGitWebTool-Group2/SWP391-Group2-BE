@@ -16,6 +16,7 @@ namespace SWP391.Group2.Infrastructure.Persistence
         public DbSet<Group> Groups => Set<Group>();
         public DbSet<User> Users => Set<User>();
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+        public DbSet<Project> Projects => Set<Project>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -59,6 +60,21 @@ namespace SWP391.Group2.Infrastructure.Persistence
                 entity.Property(x => x.TokenHash).HasColumnName("token_hash").HasMaxLength(128).IsRequired();
                 entity.Property(x => x.ExpiresAt).HasColumnName("expires_at");
                 entity.Property(x => x.RevokedAt).HasColumnName("revoked_at");
+                entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+            });
+
+            modelBuilder.Entity<Project>(entity =>
+            {
+                entity.ToTable("Projects", "dbo");
+
+                entity.HasKey(x => x.ProjectId);
+
+                entity.Property(x => x.ProjectId).HasColumnName("project_id");
+                entity.Property(x => x.GroupId).HasColumnName("group_id");
+                entity.Property(x => x.ProjectName).HasColumnName("project_name").HasMaxLength(200).IsRequired();
+                entity.Property(x => x.JiraProjectKey).HasColumnName("jira_project_key").HasMaxLength(50);
+                entity.Property(x => x.GithubOrg).HasColumnName("github_org").HasMaxLength(200);
+                entity.Property(x => x.Description).HasColumnName("description").HasMaxLength(1000);
                 entity.Property(x => x.CreatedAt).HasColumnName("created_at");
             });
         }
