@@ -15,5 +15,10 @@ namespace SWP391.Group2.Domain.Entities
         public string? GithubOrg { get; set; }
         public string? Description { get; set; }
         public DateTime CreatedAt { get; set; }
+        // Navigation
+        public Group Group { get; set; } = default!;
+        public ICollection<SyncRun> SyncRuns { get; set; } = new List<SyncRun>();
+        public ICollection<JiraIssue> JiraIssues { get; set; } = new List<JiraIssue>();
+        public ICollection<Repository> Repositories { get; set; } = new List<Repository>();
     }
 }
