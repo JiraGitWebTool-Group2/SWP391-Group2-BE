@@ -18,5 +18,7 @@ namespace SWP391.Group2.Domain.Entities
         public DateTime UpdatedAt { get; set; }
 
         public string? ProviderUserId { get; set; } // Google "sub"
+        // Navigation
+        public ICollection<GitHubCommit> GitHubCommits { get; set; } = new List<GitHubCommit>();
     }
 }
