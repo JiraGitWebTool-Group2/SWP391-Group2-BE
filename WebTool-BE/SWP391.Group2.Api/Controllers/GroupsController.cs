@@ -1,5 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using MediatR;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SWP391.Group2.Application.Features.Groups.Commands;
+using SWP391.Group2.Application.Features.Groups.Queries;
 using SWP391.Group2.Domain.Entities;
 using SWP391.Group2.Infrastructure.Persistence;
 
@@ -9,42 +12,38 @@ namespace SWP391.Group2.Api.Controllers
     [Route("api/[controller]")]
     public class GroupsController : ControllerBase
     {
-        private readonly ApplicationDbContext _db;
+        private readonly IMediator _mediator;
 
-        public GroupsController(ApplicationDbContext db)
+        public GroupsController(IMediator mediator)
         {
-            _db = db;
+            _mediator = mediator;
         }
 
-        // GET api/groups
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll(CancellationToken ct)
         {
-            var groups = await _db.Groups.AsNoTracking().ToListAsync();
-            return Ok(groups);
+            var result = await _mediator.Send(new GetGroupsQuery(), ct);
+            return Ok(result);
         }
 
         public record CreateGroupRequest(string GroupName, string? Description);
 
-        // POST api/groups
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateGroupRequest request)
+        public async Task<IActionResult> Create([FromBody] CreateGroupRequest req, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(request.GroupName))
-                return BadRequest("GroupName is required.");
-
-            // DB đã có unique group_name, nên cứ thử insert, trùng thì nó nổ.
-            var group = new Group
+            try
             {
-                GroupName = request.GroupName.Trim(),
-                Description = request.Description
-                // CreatedAt: nếu bạn cấu hình default DB thì không cần set
-            };
-
-            _db.Groups.Add(group);
-            await _db.SaveChangesAsync();
-
-            return Ok(group);
+                var result = await _mediator.Send(new CreateGroupCommand(req.GroupName, req.Description), ct);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(ex.Message);
+            }
         }
     }
 }
