@@ -1,5 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using MediatR;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SWP391.Group2.Application.Features.Integrations.Commands;
+using SWP391.Group2.Application.Features.Integrations.Queries;
 using SWP391.Group2.Infrastructure.Persistence;
 
 namespace SWP391.Group2.Api.Controllers
@@ -8,66 +11,32 @@ namespace SWP391.Group2.Api.Controllers
     [Route("api/groups/{groupId:int}/projects/{projectId:int}/integrations")]
     public class ProjectIntegrationsController : ControllerBase
     {
-        private readonly ApplicationDbContext _db;
+        private readonly IMediator _mediator;
 
-        public ProjectIntegrationsController(ApplicationDbContext db)
+        public ProjectIntegrationsController(IMediator mediator)
         {
-            _db = db;
+            _mediator = mediator;
         }
 
-        public record UpdateIntegrationRequest(
-            string? JiraProjectKey,
-            string? GithubOrg
-        );
+        public record UpdateIntegrationRequest(string? JiraProjectKey, string? GithubOrg);
 
-        // PUT /api/groups/{groupId}/projects/{projectId}/integrations
-        [HttpPut]
-        public async Task<IActionResult> Update(int groupId, int projectId, [FromBody] UpdateIntegrationRequest req)
-        {
-            // Check group tồn tại
-            var groupExists = await _db.Groups.AnyAsync(g => g.GroupId == groupId);
-            if (!groupExists) return NotFound("Group not found.");
-
-            // Lấy project đúng group
-            var project = await _db.Projects
-                .FirstOrDefaultAsync(p => p.ProjectId == projectId && p.GroupId == groupId);
-
-            if (project is null) return NotFound("Project not found in this group.");
-
-            // Update integration fields
-            project.JiraProjectKey = req.JiraProjectKey;
-            project.GithubOrg = req.GithubOrg;
-
-            await _db.SaveChangesAsync();
-
-            return Ok(new
-            {
-                project.ProjectId,
-                project.GroupId,
-                project.ProjectName,
-                project.JiraProjectKey,
-                project.GithubOrg
-            });
-        }
-
-        // GET /api/groups/{groupId}/projects/{projectId}/integrations
         [HttpGet]
-        public async Task<IActionResult> Get(int groupId, int projectId)
+        public async Task<IActionResult> Get(int groupId, int projectId, CancellationToken ct)
         {
-            var project = await _db.Projects.AsNoTracking()
-                .Where(p => p.ProjectId == projectId && p.GroupId == groupId)
-                .Select(p => new
-                {
-                    p.ProjectId,
-                    p.GroupId,
-                    p.ProjectName,
-                    p.JiraProjectKey,
-                    p.GithubOrg
-                })
-                .FirstOrDefaultAsync();
+            var dto = await _mediator.Send(new GetProjectIntegrationQuery(groupId, projectId), ct);
+            if (dto is null) return NotFound("Project not found in this group.");
+            return Ok(dto);
+        }
 
-            if (project is null) return NotFound("Project not found in this group.");
-            return Ok(project);
+        [HttpPut]
+        public async Task<IActionResult> Update(int groupId, int projectId, [FromBody] UpdateIntegrationRequest req, CancellationToken ct)
+        {
+            var dto = await _mediator.Send(
+                new UpdateProjectIntegrationCommand(groupId, projectId, req.JiraProjectKey, req.GithubOrg),
+                ct);
+
+            if (dto is null) return NotFound("Group/Project not found.");
+            return Ok(dto);
         }
     }
 }
