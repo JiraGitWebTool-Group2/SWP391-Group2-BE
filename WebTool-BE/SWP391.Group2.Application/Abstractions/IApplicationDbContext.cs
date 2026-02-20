@@ -12,7 +12,7 @@ namespace SWP391.Group2.Application.Abstractions
     {
         DbSet<Group> Groups { get; }
         DbSet<Project> Projects { get; }
-
+        DbSet<SyncRun> SyncRuns { get; }
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }
