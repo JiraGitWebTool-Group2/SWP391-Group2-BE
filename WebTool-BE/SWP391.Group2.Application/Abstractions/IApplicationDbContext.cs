@@ -18,6 +18,7 @@ namespace SWP391.Group2.Application.Abstractions
         DbSet<IssueCommitLink> IssueCommitLinks { get; }
         DbSet<GitHubCommit> GitHubCommits { get; }
         DbSet<User> Users { get; }
+        DbSet<RefreshToken> RefreshTokens { get; }
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }
