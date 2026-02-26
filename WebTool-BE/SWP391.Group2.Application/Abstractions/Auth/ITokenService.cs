@@ -11,7 +11,9 @@ namespace SWP391.Group2.Application.Abstractions.Auth
 
     public interface ITokenService
     {
-        TokenPair CreateTokenPair(User user);
+        string CreateAccessToken(User user);
+        string GenerateRefreshToken();
         string HashRefreshToken(string refreshToken);
+        int GetRefreshTokenDays();
     }
 }

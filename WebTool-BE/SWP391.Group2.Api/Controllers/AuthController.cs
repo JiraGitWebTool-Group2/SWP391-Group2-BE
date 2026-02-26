@@ -1,16 +1,11 @@
-﻿using Google.Apis.Auth;
-using MediatR;
+﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using SWP391.Group2.Application.Features.Auth;
-using SWP391.Group2.Domain.Entities;
-using SWP391.Group2.Infrastructure.Persistence;
-using System.IdentityModel.Tokens.Jwt;
+using SWP391.Group2.Api.Contracts.Auth;
+using SWP391.Group2.Application.Features.Auth.Command;
+using SWP391.Group2.Application.Features.Auth.Queries;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
+
 
 namespace SWP391.Group2.Api.Controllers
 {
@@ -25,24 +20,77 @@ namespace SWP391.Group2.Api.Controllers
             _mediator = mediator;
         }
 
-        public record GoogleLoginRequest(string IdToken);
-
+        // POST /api/auth/google
         [HttpPost("google")]
         public async Task<IActionResult> Google([FromBody] GoogleLoginRequest req, CancellationToken ct)
         {
             try
             {
-                var result = await _mediator.Send(new GoogleLoginCommand(req.IdToken), ct);
-                return Ok(new { accessToken = result.AccessToken, refreshToken = result.RefreshToken });
+                var pair = await _mediator.Send(new GoogleLoginCommand(req.IdToken), ct);
+                return Ok(new TokenResponse(pair.AccessToken, pair.RefreshToken));
             }
-            catch (ArgumentException ex)
+            catch (ArgumentException ex) { return BadRequest(ex.Message); }
+            catch (UnauthorizedAccessException ex) { return Unauthorized(ex.Message); }
+        }
+
+        // POST /api/auth/refresh
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshRequest req, CancellationToken ct)
+        {
+            try
             {
-                return BadRequest(ex.Message);
+                var pair = await _mediator.Send(new RefreshTokenCommand(req.RefreshToken), ct);
+                return Ok(new TokenResponse(pair.AccessToken, pair.RefreshToken));
+            }
+            catch (ArgumentException ex) { return BadRequest(ex.Message); }
+            catch (UnauthorizedAccessException ex) { return Unauthorized(ex.Message); }
+        }
+
+        // POST /api/auth/logout
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout([FromBody] RefreshRequest req, CancellationToken ct)
+        {
+            try
+            {
+                await _mediator.Send(new LogoutCommand(req.RefreshToken), ct);
+                return Ok(new { message = "Logged out" });
+            }
+            catch (ArgumentException ex) { return BadRequest(ex.Message); }
+        }
+
+        // GET /api/auth/me
+        [Authorize]
+        [HttpGet("me")]
+        public async Task<IActionResult> Me(CancellationToken ct)
+        {
+            var idStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(idStr, out var userId))
+                return Unauthorized("Invalid token.");
+
+            try
+            {
+                var me = await _mediator.Send(new GetMeQuery(userId), ct);
+                return Ok(me);
             }
             catch (UnauthorizedAccessException ex)
             {
                 return Unauthorized(ex.Message);
             }
         }
+
+#if DEBUG
+        // POST /api/auth/dev/google   (DEV-ONLY)
+        [HttpPost("dev/google")]
+        public async Task<IActionResult> DevGoogle([FromBody] DevLoginRequest req, CancellationToken ct)
+        {
+            try
+            {
+                var pair = await _mediator.Send(new DevLoginCommand(req.Email), ct);
+                return Ok(new TokenResponse(pair.AccessToken, pair.RefreshToken));
+            }
+            catch (ArgumentException ex) { return BadRequest(ex.Message); }
+            catch (UnauthorizedAccessException ex) { return Unauthorized(ex.Message); }
+        }
+#endif
     }
 }
