@@ -16,4 +16,9 @@
     <ProjectReference Include="..\SWP391.Group2.Domain\SWP391.Group2.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Features\Dashboards\Commands\" />
+    <Folder Include="Features\Snapshots\Commands\" />
+  </ItemGroup>
+
 </Project>

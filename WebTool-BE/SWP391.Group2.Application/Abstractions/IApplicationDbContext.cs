@@ -13,6 +13,11 @@ namespace SWP391.Group2.Application.Abstractions
         DbSet<Group> Groups { get; }
         DbSet<Project> Projects { get; }
         DbSet<SyncRun> SyncRuns { get; }
+        DbSet<Snapshot> Snapshots { get; }
+        DbSet<JiraIssue> JiraIssues { get; }
+        DbSet<IssueCommitLink> IssueCommitLinks { get; }
+        DbSet<GitHubCommit> GitHubCommits { get; }
+        DbSet<User> Users { get; }
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }
