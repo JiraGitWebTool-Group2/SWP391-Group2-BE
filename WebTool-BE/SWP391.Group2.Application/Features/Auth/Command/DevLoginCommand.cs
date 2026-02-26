@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SWP391.Group2.Application.Features.Auth
+namespace SWP391.Group2.Application.Features.Auth.Command
 {
-    public record GoogleLoginCommand(string IdToken) : IRequest<TokenPair>;
+    public record DevLoginCommand(string Email) : IRequest<TokenPair>;
 }

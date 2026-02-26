@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SWP391.Group2.Application.Features.Auth
+namespace SWP391.Group2.Application.Features.Auth.Command
 {
     public class GoogleLoginHandler : IRequestHandler<GoogleLoginCommand, TokenPair>
     {
@@ -49,7 +49,9 @@ namespace SWP391.Group2.Application.Features.Auth
                 user.FullName = googleUser.FullName;
 
             // Create tokens
-            var pair = _tokens.CreateTokenPair(user);
+            var accessToken = _tokens.CreateAccessToken(user);
+            var refreshToken = _tokens.GenerateRefreshToken();
+            var pair = new TokenPair(accessToken, refreshToken);
 
             // Store refresh token hash
             var refreshHash = _tokens.HashRefreshToken(pair.RefreshToken);

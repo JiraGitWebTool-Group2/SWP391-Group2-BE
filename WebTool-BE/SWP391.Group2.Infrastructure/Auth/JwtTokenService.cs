@@ -22,20 +22,7 @@ namespace SWP391.Group2.Infrastructure.Auth
             _config = config;
         }
 
-        public TokenPair CreateTokenPair(User user)
-        {
-            var accessToken = CreateJwt(user);
-            var refreshToken = GenerateRefreshToken();
-            return new TokenPair(accessToken, refreshToken);
-        }
-
-        public string HashRefreshToken(string refreshToken)
-        {
-            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(refreshToken));
-            return Convert.ToHexString(bytes);
-        }
-
-        private string CreateJwt(User user)
+        public string CreateAccessToken(User user)
         {
             var issuer = _config["Jwt:Issuer"]!;
             var audience = _config["Jwt:Audience"]!;
@@ -63,10 +50,21 @@ namespace SWP391.Group2.Infrastructure.Auth
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        private static string GenerateRefreshToken()
+        public string GenerateRefreshToken()
         {
             var bytes = RandomNumberGenerator.GetBytes(64);
             return Convert.ToBase64String(bytes);
+        }
+
+        public string HashRefreshToken(string refreshToken)
+        {
+            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(refreshToken));
+            return Convert.ToHexString(bytes); // 64 chars hex
+        }
+
+        public int GetRefreshTokenDays()
+        {
+            return int.Parse(_config["Jwt:RefreshTokenDays"] ?? "14");
         }
     }
 }
