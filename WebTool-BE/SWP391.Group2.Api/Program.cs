@@ -18,6 +18,20 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 
+// ================= ADD CORS =================
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:3000") // FE URL
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        });
+});
+// ===========================================
+
 var jwt = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwt["Key"]!;
 
@@ -84,6 +98,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// ================= USE CORS (QUAN TRỌNG) =================
+app.UseCors("AllowFrontend");
+// ==========================================================
 
 app.UseAuthentication();
 
