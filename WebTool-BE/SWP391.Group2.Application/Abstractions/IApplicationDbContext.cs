@@ -20,6 +20,8 @@ namespace SWP391.Group2.Application.Abstractions
         DbSet<User> Users { get; }
         DbSet<RefreshToken> RefreshTokens { get; }
         DbSet<ProjectIntegration> ProjectIntegrations { get; }
+        DbSet<Repository> Repositories { get; }
+
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }
