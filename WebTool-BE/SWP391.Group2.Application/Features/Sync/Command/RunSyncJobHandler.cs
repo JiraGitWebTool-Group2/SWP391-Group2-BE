@@ -2,21 +2,19 @@
 using Microsoft.EntityFrameworkCore;
 using SWP391.Group2.Application.Abstractions;
 using SWP391.Group2.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using SWP391.Group2.Application.Abstractions.GitHub;
 
 namespace SWP391.Group2.Application.Features.Sync.Command
 {
     public class RunSyncJobHandler : IRequestHandler<RunSyncJobCommand>
     {
         private readonly IApplicationDbContext _db;
+        private readonly IGitHubClient _gitHub;
 
-        public RunSyncJobHandler(IApplicationDbContext db)
+        public RunSyncJobHandler(IApplicationDbContext db, IGitHubClient gitHub)
         {
             _db = db;
+            _gitHub = gitHub;
         }
 
         public async Task Handle(RunSyncJobCommand request, CancellationToken ct)
@@ -108,13 +106,68 @@ namespace SWP391.Group2.Application.Features.Sync.Command
                 {
                     try
                     {
-                        await Task.Delay(800, ct); // fake call
+                        // Time window tạm: 7 ngày gần nhất
+                        var toUtc = DateTime.UtcNow;
+                        var fromUtc = toUtc.AddDays(-7);
 
-                        if (FORCE_GITHUB_FAIL) throw new Exception("Fake GitHub connection failed.");
+                        var repos = await _db.Repositories.AsNoTracking()
+                            .Where(r => r.ProjectId == run.ProjectId)
+                            .Select(r => new { r.RepoId, r.RepoName })
+                            .ToListAsync(ct);
 
-                        // TODO: sau này: gọi GitHub API thật bằng githubCfg + repositories
-                        githubOk = true;
-                        githubNote = "SUCCESS (fake)";
+                        if (repos.Count == 0)
+                        {
+                            githubOk = true;
+                            githubNote = "SUCCESS - No repositories configured.";
+                        }
+                        else
+                        {
+                            int inserted = 0;
+                            int skipped = 0;
+
+                            foreach (var repo in repos)
+                            {
+                                var commits = await _gitHub.GetCommitsAsync(
+                                    githubCfg.Org!,
+                                    repo.RepoName,
+                                    fromUtc,
+                                    toUtc,
+                                    githubCfg.TokenEncrypted!,
+                                    ct
+                                );
+
+                                foreach (var c in commits)
+                                {
+                                    // Unique theo (repo_id, commit_hash) -> check tồn tại
+                                    var exists = await _db.GitHubCommits
+                                        .AnyAsync(x => x.RepoId == repo.RepoId && x.CommitHash == c.Sha, ct);
+
+                                    if (exists)
+                                    {
+                                        skipped++;
+                                        continue;
+                                    }
+
+                                    _db.GitHubCommits.Add(new GitHubCommit
+                                    {
+                                        RepoId = repo.RepoId,
+                                        UserId = null, // mapping user làm sau
+                                        CommitHash = c.Sha,
+                                        Message = c.Message.Length > 1000 ? c.Message[..1000] : c.Message,
+                                        CommittedAt = c.CommittedAt,
+                                        CommitUrl = string.IsNullOrWhiteSpace(c.Url) ? null : c.Url
+                                    });
+
+                                    inserted++;
+                                }
+
+                                // flush theo repo để đỡ giữ nhiều entity
+                                await _db.SaveChangesAsync(ct);
+                            }
+
+                            githubOk = true;
+                            githubNote = $"SUCCESS - Inserted {inserted}, Skipped {skipped} (last 7 days).";
+                        }
                     }
                     catch (Exception ex)
                     {

@@ -3,10 +3,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SWP391.Group2.Application.Abstractions;
 using SWP391.Group2.Application.Abstractions.Auth;
+using SWP391.Group2.Application.Abstractions.GitHub;
 using SWP391.Group2.Application.Abstractions.Jobs;
 using SWP391.Group2.Infrastructure.Auth;
 using SWP391.Group2.Infrastructure.Jobs;
 using SWP391.Group2.Infrastructure.Persistence;
+using SWP391.Group2.Infrastructure.Integrations.GitHub;
 
 namespace SWP391.Group2.Infrastructure
 {
@@ -25,6 +27,8 @@ namespace SWP391.Group2.Infrastructure
             services.AddSingleton<BackgroundJobQueue>();
             services.AddSingleton<IBackgroundJobQueue>(sp => sp.GetRequiredService<BackgroundJobQueue>());
             services.AddHostedService<SyncRunWorker>();
+
+            services.AddHttpClient<IGitHubClient, GitHubClient>();
 
             return services;
         }
