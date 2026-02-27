@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="MediatR" Version="14.0.0" />
     <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="11.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.9" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.13" />
   </ItemGroup>
 
@@ -19,6 +20,7 @@
   <ItemGroup>
     <Folder Include="Features\Dashboards\Commands\" />
     <Folder Include="Features\Snapshots\Commands\" />
+    <Folder Include="Features\Users\Queries\" />
   </ItemGroup>
 
 </Project>
