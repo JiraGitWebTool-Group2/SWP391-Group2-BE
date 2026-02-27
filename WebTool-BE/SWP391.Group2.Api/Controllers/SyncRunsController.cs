@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SWP391.Group2.Api.Contracts.Sync;
 using SWP391.Group2.Application.Features.Sync.Command;
+using SWP391.Group2.Application.Features.Sync.Queries;
 using System.Security.Claims;
 
 namespace SWP391.Group2.Api.Controllers
@@ -43,6 +44,20 @@ namespace SWP391.Group2.Api.Controllers
             catch (ArgumentException ex)
             {
                 return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("{syncRunId:int}")]
+        public async Task<IActionResult> GetStatus(int syncRunId, CancellationToken ct)
+        {
+            try
+            {
+                var res = await _mediator.Send(new GetSyncRunStatusQuery(syncRunId), ct);
+                return Ok(res);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
             }
         }
     }
