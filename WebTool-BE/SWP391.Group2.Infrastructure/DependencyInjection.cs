@@ -2,14 +2,11 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SWP391.Group2.Application.Abstractions;
-using SWP391.Group2.Infrastructure.Persistence;
 using SWP391.Group2.Application.Abstractions.Auth;
+using SWP391.Group2.Application.Abstractions.Jobs;
 using SWP391.Group2.Infrastructure.Auth;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using SWP391.Group2.Infrastructure.Jobs;
+using SWP391.Group2.Infrastructure.Persistence;
 
 namespace SWP391.Group2.Infrastructure
 {
@@ -24,6 +21,10 @@ namespace SWP391.Group2.Infrastructure
 
             services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
             services.AddScoped<ITokenService, JwtTokenService>();
+
+            services.AddSingleton<BackgroundJobQueue>();
+            services.AddSingleton<IBackgroundJobQueue>(sp => sp.GetRequiredService<BackgroundJobQueue>());
+            services.AddHostedService<SyncRunWorker>();
 
             return services;
         }
