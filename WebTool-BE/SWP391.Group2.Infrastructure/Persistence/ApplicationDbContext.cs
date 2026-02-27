@@ -25,7 +25,9 @@ namespace SWP391.Group2.Infrastructure.Persistence
         public DbSet<Repository> Repositories => Set<Repository>();
         public DbSet<GitHubCommit> GitHubCommits => Set<GitHubCommit>();
         public DbSet<IssueCommitLink> IssueCommitLinks => Set<IssueCommitLink>();
-        
+
+        public DbSet<ProjectIntegration> ProjectIntegrations => Set<ProjectIntegration>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -209,6 +211,32 @@ namespace SWP391.Group2.Infrastructure.Persistence
                 entity.HasOne(x => x.GitHubCommit)
                     .WithMany()
                     .HasForeignKey(x => x.CommitId);
+            });
+
+            modelBuilder.Entity<ProjectIntegration>(e =>
+            {
+                e.ToTable("ProjectIntegrations");
+
+                e.HasKey(x => x.IntegrationId);
+
+                e.Property(x => x.IntegrationId).HasColumnName("integration_id");
+                e.Property(x => x.ProjectId).HasColumnName("project_id");
+
+                e.Property(x => x.Provider).HasColumnName("provider").HasMaxLength(10);
+
+                e.Property(x => x.BaseUrl).HasColumnName("base_url").HasMaxLength(300);
+                e.Property(x => x.ProjectKey).HasColumnName("project_key").HasMaxLength(50);
+                e.Property(x => x.Org).HasColumnName("org").HasMaxLength(200);
+
+                e.Property(x => x.TokenEncrypted).HasColumnName("token_encrypted").HasMaxLength(1000);
+
+                e.Property(x => x.CreatedAt).HasColumnName("created_at");
+                e.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+
+                e.HasIndex(x => new { x.ProjectId, x.Provider }).IsUnique();
+
+                // FK
+                // Nếu bạn đã có entity Project thì add navigation sau, chưa có cũng không sao.
             });
         }
     }
