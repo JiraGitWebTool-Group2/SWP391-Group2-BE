@@ -16,7 +16,9 @@ namespace SWP391.Group2.Domain.Entities
         public int? SprintId { get; set; }
         public bool IncludeJira { get; set; }
         public bool IncludeGithub { get; set; }
-        public string RunStatus { get; set; } = default!;   // RUNNING/SUCCESS/FAILED
+
+        //public string RunStatus { get; set; } = default!;   // RUNNING/SUCCESS/FAILED
+        public string RunStatus { get; set; } = "RUNNING";
         public DateTime StartedAt { get; set; }
         public DateTime? FinishedAt { get; set; }
         public string? Notes { get; set; }
