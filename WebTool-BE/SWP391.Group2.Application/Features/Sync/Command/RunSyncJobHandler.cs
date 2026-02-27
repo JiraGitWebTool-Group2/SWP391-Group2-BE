@@ -24,14 +24,11 @@ namespace SWP391.Group2.Application.Features.Sync.Command
             var run = await _db.SyncRuns.FirstOrDefaultAsync(x => x.SyncRunId == request.SyncRunId, ct);
             if (run is null) return;
 
-            // Nếu job bị gọi lại khi đã xong thì bỏ qua (idempotent nhẹ)
             if (run.RunStatus != "RUNNING") return;
 
             bool jiraSelected = run.IncludeJira;
             bool githubSelected = run.IncludeGithub;
 
-            // Nếu vì lý do nào đó DB có include_jira/include_github = false hết
-            // thì fail (nhưng normal flow đã validate ở StartSync rồi)
             if (!jiraSelected && !githubSelected)
             {
                 run.RunStatus = "FAILED";
@@ -41,71 +38,103 @@ namespace SWP391.Group2.Application.Features.Sync.Command
                 return;
             }
 
-            // ====== FAKE FLAGS để bạn test lỗi/partial ======
-            // Đổi true/false tùy lúc bạn muốn test
-            const bool FORCE_JIRA_FAIL = true;
+            // ====== Fake flags để test ======
+            const bool FORCE_JIRA_FAIL = false;
             const bool FORCE_GITHUB_FAIL = false;
-            // ==============================================
+            // ===============================
 
-            bool jiraOk = !jiraSelected;   // nếu không chọn -> coi như "N/A" (không làm, không fail)
+            // Load integration configs theo project_id
+            var configs = await _db.ProjectIntegrations.AsNoTracking()
+                .Where(x => x.ProjectId == run.ProjectId)
+                .ToListAsync(ct);
+
+            var jiraCfg = configs.FirstOrDefault(x => x.Provider == "JIRA");
+            var githubCfg = configs.FirstOrDefault(x => x.Provider == "GITHUB");
+
+            bool jiraOk = !jiraSelected;   // nếu không chọn -> N/A
             bool githubOk = !githubSelected;
 
             string jiraNote = jiraSelected ? "SKIPPED" : "N/A";
             string githubNote = githubSelected ? "SKIPPED" : "N/A";
 
-            try
+            // ---------- JIRA ----------
+            if (jiraSelected)
             {
-                // giả lập chạy
-                if (jiraSelected)
+                // Validate config trước
+                if (jiraCfg is null)
                 {
-                    await Task.Delay(800, ct);
+                    jiraOk = false;
+                    jiraNote = "FAILED - Missing Jira integration config.";
+                }
+                else if (string.IsNullOrWhiteSpace(jiraCfg.BaseUrl) || string.IsNullOrWhiteSpace(jiraCfg.ProjectKey) || string.IsNullOrWhiteSpace(jiraCfg.TokenEncrypted))
+                {
+                    jiraOk = false;
+                    jiraNote = "FAILED - Jira config incomplete (baseUrl/projectKey/token).";
+                }
+                else
+                {
+                    try
+                    {
+                        await Task.Delay(800, ct); // fake call
 
-                    if (FORCE_JIRA_FAIL) throw new Exception("Fake Jira connection failed.");
+                        if (FORCE_JIRA_FAIL) throw new Exception("Fake Jira connection failed.");
 
-                    // TODO: sau này gọi Jira API + upsert
-                    jiraOk = true;
-                    jiraNote = "SUCCESS (fake)";
+                        // TODO: sau này: gọi Jira API thật bằng jiraCfg
+                        jiraOk = true;
+                        jiraNote = "SUCCESS (fake)";
+                    }
+                    catch (Exception ex)
+                    {
+                        jiraOk = false;
+                        jiraNote = $"FAILED - {TrimMsg(ex.Message)}";
+                    }
                 }
             }
-            catch (Exception ex)
-            {
-                jiraOk = false;
-                jiraNote = $"FAILED - {TrimMsg(ex.Message)}";
-            }
 
-            try
+            // ---------- GITHUB ----------
+            if (githubSelected)
             {
-                if (githubSelected)
+                if (githubCfg is null)
                 {
-                    await Task.Delay(800, ct);
+                    githubOk = false;
+                    githubNote = "FAILED - Missing GitHub integration config.";
+                }
+                else if (string.IsNullOrWhiteSpace(githubCfg.Org) || string.IsNullOrWhiteSpace(githubCfg.TokenEncrypted))
+                {
+                    githubOk = false;
+                    githubNote = "FAILED - GitHub config incomplete (org/token).";
+                }
+                else
+                {
+                    try
+                    {
+                        await Task.Delay(800, ct); // fake call
 
-                    if (FORCE_GITHUB_FAIL) throw new Exception("Fake GitHub connection failed.");
+                        if (FORCE_GITHUB_FAIL) throw new Exception("Fake GitHub connection failed.");
 
-                    // TODO: sau này gọi GitHub API + upsert
-                    githubOk = true;
-                    githubNote = "SUCCESS (fake)";
+                        // TODO: sau này: gọi GitHub API thật bằng githubCfg + repositories
+                        githubOk = true;
+                        githubNote = "SUCCESS (fake)";
+                    }
+                    catch (Exception ex)
+                    {
+                        githubOk = false;
+                        githubNote = $"FAILED - {TrimMsg(ex.Message)}";
+                    }
                 }
             }
-            catch (Exception ex)
-            {
-                githubOk = false;
-                githubNote = $"FAILED - {TrimMsg(ex.Message)}";
-            }
 
-            // tạo snapshot dù data rỗng cũng ok (MF-1 AF-5)
+            // Snapshot luôn tạo (kể cả rỗng)
             _db.Snapshots.Add(new Snapshot
             {
                 SyncRunId = run.SyncRunId,
                 CapturedAt = DateTime.UtcNow,
-                Label = "Fake sync"
+                Label = "Sync snapshot"
             });
 
             run.Notes = $"JIRA: {jiraNote}; GITHUB: {githubNote}";
             run.FinishedAt = DateTime.UtcNow;
 
-            // quyết định status cuối
-            // - nếu chọn 1 nguồn: status = SUCCESS/FAILED theo nguồn đó
-            // - nếu chọn 2 nguồn: SUCCESS nếu cả 2 OK, FAILED nếu cả 2 fail, PARTIAL nếu 1 OK 1 fail
             if (jiraSelected && githubSelected)
             {
                 run.RunStatus = (jiraOk && githubOk) ? "SUCCESS"
@@ -116,7 +145,7 @@ namespace SWP391.Group2.Application.Features.Sync.Command
             {
                 run.RunStatus = jiraOk ? "SUCCESS" : "FAILED";
             }
-            else // githubSelected
+            else
             {
                 run.RunStatus = githubOk ? "SUCCESS" : "FAILED";
             }
