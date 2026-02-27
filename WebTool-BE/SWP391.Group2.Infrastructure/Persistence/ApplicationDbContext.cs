@@ -26,6 +26,8 @@ namespace SWP391.Group2.Infrastructure.Persistence
         public DbSet<GitHubCommit> GitHubCommits => Set<GitHubCommit>();
         public DbSet<IssueCommitLink> IssueCommitLinks => Set<IssueCommitLink>();
 
+        public DbSet<SnapshotCommit> SnapshotCommits => Set<SnapshotCommit>();
+
         public DbSet<ProjectIntegration> ProjectIntegrations => Set<ProjectIntegration>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -237,6 +239,18 @@ namespace SWP391.Group2.Infrastructure.Persistence
 
                 // FK
                 // Nếu bạn đã có entity Project thì add navigation sau, chưa có cũng không sao.
+            });
+
+            modelBuilder.Entity<SnapshotCommit>(e =>
+            {
+                e.ToTable("SnapshotCommits");
+                e.HasKey(x => x.SnapshotCommitId);
+
+                e.Property(x => x.SnapshotCommitId).HasColumnName("snapshot_commit_id");
+                e.Property(x => x.SnapshotId).HasColumnName("snapshot_id");
+                e.Property(x => x.CommitId).HasColumnName("commit_id");
+
+                e.HasIndex(x => new { x.SnapshotId, x.CommitId }).IsUnique();
             });
         }
     }

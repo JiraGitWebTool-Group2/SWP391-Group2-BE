@@ -106,7 +106,6 @@ namespace SWP391.Group2.Application.Features.Sync.Command
                 {
                     try
                     {
-                        // Time window tạm: 7 ngày gần nhất
                         var toUtc = DateTime.UtcNow;
                         var fromUtc = toUtc.AddDays(-7);
 
@@ -125,6 +124,9 @@ namespace SWP391.Group2.Application.Features.Sync.Command
                             int inserted = 0;
                             int skipped = 0;
 
+                            // Collect commit IDs that belong to THIS sync window (for snapshot)
+                            var commitIdsForSnapshot = new HashSet<int>();
+
                             foreach (var repo in repos)
                             {
                                 var commits = await _gitHub.GetCommitsAsync(
@@ -138,35 +140,68 @@ namespace SWP391.Group2.Application.Features.Sync.Command
 
                                 foreach (var c in commits)
                                 {
-                                    // Unique theo (repo_id, commit_hash) -> check tồn tại
-                                    var exists = await _db.GitHubCommits
-                                        .AnyAsync(x => x.RepoId == repo.RepoId && x.CommitHash == c.Sha, ct);
+                                    // Check tồn tại theo (repo_id, sha)
+                                    var existingCommitId = await _db.GitHubCommits
+                                        .Where(x => x.RepoId == repo.RepoId && x.CommitHash == c.Sha)
+                                        .Select(x => (int?)x.CommitId)
+                                        .FirstOrDefaultAsync(ct);
 
-                                    if (exists)
+                                    if (existingCommitId.HasValue)
                                     {
                                         skipped++;
+                                        commitIdsForSnapshot.Add(existingCommitId.Value);
                                         continue;
                                     }
 
-                                    _db.GitHubCommits.Add(new GitHubCommit
+                                    var entity = new GitHubCommit
                                     {
                                         RepoId = repo.RepoId,
-                                        UserId = null, // mapping user làm sau
+                                        UserId = null,
                                         CommitHash = c.Sha,
                                         Message = c.Message.Length > 1000 ? c.Message[..1000] : c.Message,
                                         CommittedAt = c.CommittedAt,
                                         CommitUrl = string.IsNullOrWhiteSpace(c.Url) ? null : c.Url
-                                    });
+                                    };
+
+                                    _db.GitHubCommits.Add(entity);
+                                    await _db.SaveChangesAsync(ct); // để có commit_id ngay
 
                                     inserted++;
+                                    commitIdsForSnapshot.Add(entity.CommitId);
                                 }
-
-                                // flush theo repo để đỡ giữ nhiều entity
-                                await _db.SaveChangesAsync(ct);
                             }
 
+                            // ===== Create Snapshot + link commits =====
+                            var snapshot = new Snapshot
+                            {
+                                SyncRunId = run.SyncRunId,
+                                CapturedAt = DateTime.UtcNow,
+                                Label = $"GitHub sync {fromUtc:yyyy-MM-dd}..{toUtc:yyyy-MM-dd}"
+                            };
+
+                            _db.Snapshots.Add(snapshot);
+                            await _db.SaveChangesAsync(ct); // để có snapshot_id
+
+                            foreach (var commitId in commitIdsForSnapshot)
+                            {
+                                // tránh duplicate nếu job chạy lại
+                                var existsLink = await _db.SnapshotCommits
+                                    .AnyAsync(x => x.SnapshotId == snapshot.SnapshotId && x.CommitId == commitId, ct);
+
+                                if (!existsLink)
+                                {
+                                    _db.SnapshotCommits.Add(new SnapshotCommit
+                                    {
+                                        SnapshotId = snapshot.SnapshotId,
+                                        CommitId = commitId
+                                    });
+                                }
+                            }
+
+                            await _db.SaveChangesAsync(ct);
+
                             githubOk = true;
-                            githubNote = $"SUCCESS - Inserted {inserted}, Skipped {skipped} (last 7 days).";
+                            githubNote = $"SUCCESS - Inserted {inserted}, Skipped {skipped} (last 7 days). SnapshotId={snapshot.SnapshotId}";
                         }
                     }
                     catch (Exception ex)
@@ -176,14 +211,6 @@ namespace SWP391.Group2.Application.Features.Sync.Command
                     }
                 }
             }
-
-            // Snapshot luôn tạo (kể cả rỗng)
-            _db.Snapshots.Add(new Snapshot
-            {
-                SyncRunId = run.SyncRunId,
-                CapturedAt = DateTime.UtcNow,
-                Label = "Sync snapshot"
-            });
 
             run.Notes = $"JIRA: {jiraNote}; GITHUB: {githubNote}";
             run.FinishedAt = DateTime.UtcNow;
