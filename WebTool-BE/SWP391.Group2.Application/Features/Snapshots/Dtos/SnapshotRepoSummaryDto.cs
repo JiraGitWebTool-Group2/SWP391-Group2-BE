@@ -1,0 +1,14 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace SWP391.Group2.Application.Features.Snapshots.Dtos
+{
+    public record SnapshotRepoSummaryDto(
+        int RepoId,
+        string RepoName,
+        int CommitCount
+    );
+}
