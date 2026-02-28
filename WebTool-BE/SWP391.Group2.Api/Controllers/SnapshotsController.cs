@@ -76,4 +76,23 @@ public class SnapshotsController : ControllerBase
         }
         catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
     }
+
+
+    // GET /api/snapshots/{id}/daily-summary?tzOffsetMinutes=420
+    [HttpGet("{id:int}/daily-summary")]
+    public async Task<IActionResult> GetDailySummary(
+        [FromRoute] int id,
+        [FromQuery] int tzOffsetMinutes = 0,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var result = await _mediator.Send(new GetSnapshotDailySummaryQuery(id, tzOffsetMinutes), ct);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
 }
