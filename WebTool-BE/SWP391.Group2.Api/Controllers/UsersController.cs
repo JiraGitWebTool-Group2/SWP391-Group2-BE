@@ -18,6 +18,11 @@ namespace SWP391.Group2.Api.Controllers
             _mediator = mediator;
         }
 
+        public sealed class ImportUsersExcelRequest
+        {
+            public IFormFile File { get; set; } = default!;
+        }
+
         // POST /api/users
         [HttpPost]
         public async Task<IActionResult> AddUser([FromBody] CreateUserRequestDto request)
@@ -42,5 +47,29 @@ namespace SWP391.Group2.Api.Controllers
         // stub để CreatedAtAction không bị đỏ (bạn có GET thật rồi thì thay)
         [HttpGet("{id:int}")]
         public IActionResult GetById([FromRoute] int id) => Ok();
+
+        // POST /api/users/import-excel
+        [HttpPost("import-excel")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> ImportUsersExcel([FromForm] ImportUsersExcelRequest request, CancellationToken ct)
+        {
+            if (request.File == null || request.File.Length == 0)
+                return BadRequest(new { message = "File rỗng." });
+
+            byte[] content;
+            using (var ms = new MemoryStream())
+            {
+                await request.File.CopyToAsync(ms, ct);
+                content = ms.ToArray();
+            }
+
+            var result = await _mediator.Send(
+                new ImportUsersFromExcelCommand(content, request.File.FileName),
+                ct);
+
+            return Ok(result);
+        }
     }
+
+
 }
