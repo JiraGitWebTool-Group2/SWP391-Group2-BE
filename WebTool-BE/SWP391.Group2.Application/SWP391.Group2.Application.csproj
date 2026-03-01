@@ -21,7 +21,6 @@
   <ItemGroup>
     <Folder Include="Features\Dashboards\Commands\" />
     <Folder Include="Features\Snapshots\Commands\" />
-    <Folder Include="Features\Users\Queries\" />
   </ItemGroup>
 
 </Project>
