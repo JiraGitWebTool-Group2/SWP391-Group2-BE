@@ -82,7 +82,7 @@ namespace SWP391.Group2.Api.Controllers
             var email =
                 User.FindFirstValue(ClaimTypes.Email) ??
                 User.FindFirstValue("email") ??
-                User.FindFirstValue(ClaimTypes.Name); // fallback (tùy bạn set claim)
+                User.FindFirstValue(ClaimTypes.Name); //fallback (tùy bạn set claim)
 
             if (string.IsNullOrWhiteSpace(email))
                 return Unauthorized(new { message = "Token không chứa email claim." });
