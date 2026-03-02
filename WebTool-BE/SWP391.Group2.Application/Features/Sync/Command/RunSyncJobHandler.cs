@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SWP391.Group2.Application.Abstractions;
 using SWP391.Group2.Domain.Entities;
 using SWP391.Group2.Application.Abstractions.GitHub;
+using SWP391.Group2.Application.Abstractions.Jira;
 
 namespace SWP391.Group2.Application.Features.Sync.Command
 {
@@ -10,11 +11,14 @@ namespace SWP391.Group2.Application.Features.Sync.Command
     {
         private readonly IApplicationDbContext _db;
         private readonly IGitHubClient _gitHub;
+        private readonly IJiraClient _jira; 
 
-        public RunSyncJobHandler(IApplicationDbContext db, IGitHubClient gitHub)
+        public RunSyncJobHandler(IApplicationDbContext db, IGitHubClient gitHub, IJiraClient jira)
         {
             _db = db;
             _gitHub = gitHub;
+            _jira = jira;
+
         }
 
         public async Task Handle(RunSyncJobCommand request, CancellationToken ct)
@@ -58,7 +62,6 @@ namespace SWP391.Group2.Application.Features.Sync.Command
             // ---------- JIRA ----------
             if (jiraSelected)
             {
-                // Validate config trước
                 if (jiraCfg is null)
                 {
                     jiraOk = false;
@@ -73,13 +76,83 @@ namespace SWP391.Group2.Application.Features.Sync.Command
                 {
                     try
                     {
-                        await Task.Delay(800, ct); // fake call
-
                         if (FORCE_JIRA_FAIL) throw new Exception("Fake Jira connection failed.");
 
-                        // TODO: sau này: gọi Jira API thật bằng jiraCfg
+                        var projectKey = jiraCfg.ProjectKey!.Trim();
+
+                        var jql = run.ScopeType switch
+                        {
+                            "BACKLOG" => $"project = {projectKey} AND sprint IS EMPTY ORDER BY updated DESC",
+                            "SPRINT" => $"project = {projectKey} AND sprint IS NOT EMPTY ORDER BY updated DESC",
+                            _ => $"project = {projectKey} ORDER BY updated DESC"
+                        };
+
+                        var issues = await _jira.SearchIssuesAsync(
+                            jiraCfg.BaseUrl!,
+                            jql,
+                            maxResults: 100,
+                            jiraCfg.TokenEncrypted!,
+                            ct
+                        );
+
+                        int inserted = 0;
+                        int updated = 0;
+
+                        foreach (var it in issues)
+                        {
+                            var key = (it.IssueKey ?? "").Trim().ToUpperInvariant();
+                            if (string.IsNullOrWhiteSpace(key)) continue;
+
+                            var existing = await _db.JiraIssues
+                                .FirstOrDefaultAsync(x => x.ProjectId == run.ProjectId && x.IssueKey == key, ct);
+
+                            var now = DateTime.UtcNow;
+
+                            var summary = (it.Summary ?? "").Trim();
+                            if (summary.Length > 500) summary = summary[..500];
+
+                            var issueType = MapIssueType(it.IssueType);
+                            var priority = MapPriority(it.Priority);
+                            var status = MapStatus(it.Status);
+
+                            if (existing is null)
+                            {
+                                _db.JiraIssues.Add(new JiraIssue
+                                {
+                                    ProjectId = run.ProjectId,
+                                    SprintId = null,          // chưa map sprint
+                                    AssigneeUserId = null,    // chưa map user
+                                    IssueKey = key,
+                                    Summary = summary,
+                                    Description = it.Description, // raw JSON ok
+                                    IssueType = issueType,
+                                    Priority = priority,
+                                    Status = status,
+                                    StoryPoints = it.StoryPoints,
+                                    JiraUrl = it.Url,
+                                    CreatedAt = now,
+                                    UpdatedAt = now
+                                });
+                                inserted++;
+                            }
+                            else
+                            {
+                                existing.Summary = summary;
+                                existing.Description = it.Description;
+                                existing.IssueType = issueType;
+                                existing.Priority = priority;
+                                existing.Status = status;
+                                existing.StoryPoints = it.StoryPoints;
+                                existing.JiraUrl = it.Url;
+                                existing.UpdatedAt = now;
+                                updated++;
+                            }
+                        }
+
+                        await _db.SaveChangesAsync(ct);
+
                         jiraOk = true;
-                        jiraNote = "SUCCESS (fake)";
+                        jiraNote = $"SUCCESS - Inserted {inserted}, Updated {updated}.";
                     }
                     catch (Exception ex)
                     {
@@ -87,6 +160,47 @@ namespace SWP391.Group2.Application.Features.Sync.Command
                         jiraNote = $"FAILED - {TrimMsg(ex.Message)}";
                     }
                 }
+            }
+
+            static string MapStatus(string s)
+            {
+                s = (s ?? "").Trim().ToUpperInvariant();
+                return s switch
+                {
+                    "TO DO" or "TODO" => "TODO",
+                    "IN PROGRESS" => "IN_PROGRESS",
+                    "IN REVIEW" or "REVIEW" => "IN_REVIEW",
+                    "DONE" => "DONE",
+                    "BLOCKED" => "BLOCKED",
+                    _ => "TODO"
+                };
+            }
+
+            static string MapPriority(string s)
+            {
+                s = (s ?? "").Trim().ToUpperInvariant();
+                return s switch
+                {
+                    "LOW" => "LOW",
+                    "MEDIUM" => "MEDIUM",
+                    "HIGH" => "HIGH",
+                    "HIGHEST" => "HIGHEST",
+                    _ => "MEDIUM"
+                };
+            }
+
+            static string MapIssueType(string s)
+            {
+                s = (s ?? "").Trim().ToUpperInvariant();
+                return s switch
+                {
+                    "EPIC" => "EPIC",
+                    "STORY" => "STORY",
+                    "TASK" => "TASK",
+                    "BUG" => "BUG",
+                    "SUB-TASK" or "SUBTASK" => "SUBTASK",
+                    _ => "TASK"
+                };
             }
 
             // ---------- GITHUB ----------
