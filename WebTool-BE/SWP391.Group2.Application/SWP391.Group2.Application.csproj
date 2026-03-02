@@ -20,7 +20,6 @@
 
   <ItemGroup>
     <Folder Include="Features\Dashboards\Commands\" />
-    <Folder Include="Features\Snapshots\Commands\" />
   </ItemGroup>
 
 </Project>

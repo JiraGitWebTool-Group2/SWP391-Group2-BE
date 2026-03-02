@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SWP391.Group2.Application.Features.Snapshots.Commands;
 using SWP391.Group2.Application.Features.Snapshots.Dtos;
 using SWP391.Group2.Application.Features.Snapshots.Queries;
 
@@ -8,7 +9,7 @@ using SWP391.Group2.Application.Features.Snapshots.Queries;
 namespace SWP391.Group2.Api.Controllers;
 
 [ApiController]
-[Route("api/groups")]
+[Route("api/snapshots")]
 public class SnapshotsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -78,42 +79,16 @@ public class SnapshotsController : ControllerBase
     }
 
 
-    // GET /api/snapshots/{id}/daily-summary?tzOffsetMinutes=420
-    [HttpGet("{id:int}/daily-summary")]
-    public async Task<IActionResult> GetDailySummary(
-        [FromRoute] int id,
-        [FromQuery] int tzOffsetMinutes = 0,
-        CancellationToken ct = default)
+    // GET /api/snapshots/{id}/daily-summary
+    [Authorize]
+    [HttpGet("{snapshotId:int}/daily-summary")]
+    public async Task<IActionResult> GetDailySummary(int snapshotId, CancellationToken ct)
     {
         try
         {
-            var result = await _mediator.Send(new GetSnapshotDailySummaryQuery(id, tzOffsetMinutes), ct);
+            var result = await _mediator.Send(new GetSnapshotDailySummaryQuery(snapshotId), ct);
             return Ok(result);
         }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
-    }
-
-    [HttpGet("{id:int}/traceability-lite")]
-    public async Task<IActionResult> GetTraceabilityLite(
-    [FromRoute] int id,
-    [FromQuery] string? projectKeyPrefix = null,
-    [FromQuery] int top = 50,
-    CancellationToken ct = default)
-    {
-        try
-        {
-            var result = await _mediator.Send(
-                new GetSnapshotTraceabilityLiteQuery(id, projectKeyPrefix, top),
-                ct);
-
-            return Ok(result);
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
+        catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
     }
 }
