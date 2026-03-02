@@ -59,6 +59,8 @@ namespace SWP391.Group2.Application.Features.Sync.Command
             string jiraNote = jiraSelected ? "SKIPPED" : "N/A";
             string githubNote = githubSelected ? "SKIPPED" : "N/A";
 
+            int? snapshotId = null;
+
             // ---------- JIRA ----------
             if (jiraSelected)
             {
@@ -295,6 +297,7 @@ namespace SWP391.Group2.Application.Features.Sync.Command
 
                             _db.Snapshots.Add(snapshot);
                             await _db.SaveChangesAsync(ct); // để có snapshot_id
+                            snapshotId = snapshot.SnapshotId;
 
                             foreach (var commitId in commitIdsForSnapshot)
                             {
@@ -326,7 +329,27 @@ namespace SWP391.Group2.Application.Features.Sync.Command
                 }
             }
 
-            run.Notes = $"JIRA: {jiraNote}; GITHUB: {githubNote}";
+            string linksNote = "N/A";
+
+            if (jiraSelected && githubSelected && jiraOk && githubOk && snapshotId.HasValue)
+            {
+                try
+                {
+                    var (ok, note) = await BuildIssueCommitLinksAsync(snapshotId.Value, run.ProjectId, ct);
+                    linksNote = ok ? note : $"FAILED - {note}";
+                }
+                catch (Exception ex)
+                {
+                    linksNote = $"FAILED - {TrimMsg(ex.Message)}";
+                }
+            }
+            else if (jiraSelected && githubSelected)
+            {
+                linksNote = "SKIPPED - Need both Jira and GitHub SUCCESS and a Snapshot.";
+            }
+
+            //run.Notes = $"JIRA: {jiraNote}; GITHUB: {githubNote}";
+            run.Notes = $"JIRA: {jiraNote}; GITHUB: {githubNote}; LINKS: {linksNote}";
             run.FinishedAt = DateTime.UtcNow;
 
             if (jiraSelected && githubSelected)
@@ -349,5 +372,73 @@ namespace SWP391.Group2.Application.Features.Sync.Command
 
         private static string TrimMsg(string msg)
             => (msg ?? "").Length <= 200 ? (msg ?? "") : (msg ?? "")[..200];
+
+        private static readonly System.Text.RegularExpressions.Regex IssueKeyRx =
+            new(@"\b[A-Z][A-Z0-9]+-\d+\b", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        private async Task<(bool ok, string note)> BuildIssueCommitLinksAsync(int snapshotId, int projectId, CancellationToken ct)
+        {
+            // Map issueKey -> issueId
+            var issueMap = await _db.JiraIssues
+                .AsNoTracking()
+                .Where(i => i.ProjectId == projectId)
+                .Select(i => new { i.IssueId, i.IssueKey })
+                .ToDictionaryAsync(x => x.IssueKey.ToUpper(), x => x.IssueId, ct);
+
+            if (issueMap.Count == 0)
+                return (false, "No JiraIssues for this project.");
+
+            // Commits in snapshot
+            var commits = await (
+                from sc in _db.SnapshotCommits.AsNoTracking()
+                join c in _db.GitHubCommits.AsNoTracking() on sc.CommitId equals c.CommitId
+                where sc.SnapshotId == snapshotId
+                select new { c.CommitId, c.Message }
+            ).ToListAsync(ct);
+
+            if (commits.Count == 0)
+                return (false, "No commits in snapshot.");
+
+            // Existing links (avoid duplicate insert)
+            var existing = await _db.IssueCommitLinks
+                .AsNoTracking()
+                .Where(x => x.SnapshotId == snapshotId)
+                .Select(x => new { x.IssueId, x.CommitId })
+                .ToListAsync(ct);
+
+            var existsSet = existing.Select(x => (x.IssueId, x.CommitId)).ToHashSet();
+
+            int inserted = 0;
+
+            foreach (var c in commits)
+            {
+                var keys = IssueKeyRx.Matches(c.Message ?? "")
+                    .Select(m => m.Value.ToUpperInvariant())
+                    .Distinct();
+
+                foreach (var key in keys)
+                {
+                    if (!issueMap.TryGetValue(key, out var issueId)) continue;
+
+                    if (existsSet.Contains((issueId, c.CommitId))) continue;
+
+                    _db.IssueCommitLinks.Add(new IssueCommitLink
+                    {
+                        SnapshotId = snapshotId,
+                        IssueId = issueId,
+                        CommitId = c.CommitId
+                    });
+
+                    existsSet.Add((issueId, c.CommitId));
+                    inserted++;
+                }
+            }
+
+            if (inserted == 0)
+                return (true, "SUCCESS - 0 new links.");
+
+            await _db.SaveChangesAsync(ct);
+            return (true, $"SUCCESS - Inserted {inserted} links.");
+        }
     }
 }
