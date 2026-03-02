@@ -11,6 +11,7 @@ namespace SWP391.Group2.Application.Features.Sync.Dtos
         string RunStatus,
         string? Notes,
         DateTime StartedAt,
-        DateTime? FinishedAt
+        DateTime? FinishedAt,
+        int? SnapshotId
     );
 }
