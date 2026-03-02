@@ -58,5 +58,33 @@ namespace SWP391.Group2.Api.Controllers
             }
             catch (ArgumentException ex) { return BadRequest(ex.Message); }
         }
+
+        // POST /api/projects/{projectId}/integrations
+        // Create mới integration config. Nếu đã tồn tại: 409, dùng PUT để update.
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> Create(int projectId, [FromBody] CreateIntegrationRequest req, CancellationToken ct)
+        {
+            try
+            {
+                var dto = await _mediator.Send(new CreateProjectIntegrationCommand(
+                    projectId,
+                    req.Provider,
+                    req.BaseUrl,
+                    req.ProjectKey,
+                    req.Org,
+                    req.Token
+                ), ct);
+
+                var apiDto = new Contracts.Integrations.IntegrationDto(
+                    dto.ProjectId, dto.Provider, dto.BaseUrl, dto.ProjectKey, dto.Org, dto.HasToken, dto.UpdatedAt
+                );
+
+                // Trả 201 + Location trỏ về endpoint GET
+                return CreatedAtAction(nameof(Get), new { projectId = dto.ProjectId, provider = dto.Provider }, apiDto);
+            }
+            catch (ArgumentException ex) { return BadRequest(ex.Message); }
+            catch (InvalidOperationException ex) { return Conflict(ex.Message); }
+        }
     }
 }
