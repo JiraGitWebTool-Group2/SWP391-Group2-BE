@@ -1,7 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SWP391.Group2.Application.Features.Snapshots.Commands;
 using SWP391.Group2.Application.Features.Snapshots.Dtos;
 using SWP391.Group2.Application.Features.Snapshots.Queries;
 
