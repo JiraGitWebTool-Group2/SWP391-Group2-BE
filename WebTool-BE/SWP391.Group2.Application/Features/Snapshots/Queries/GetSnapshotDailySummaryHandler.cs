@@ -10,70 +10,45 @@ using System.Threading.Tasks;
 
 namespace SWP391.Group2.Application.Features.Snapshots.Queries
 {
-    public sealed class GetSnapshotDailySummaryHandler
-    : IRequestHandler<GetSnapshotDailySummaryQuery, SnapshotDailySummaryDto>
+    public class GetSnapshotDailySummaryHandler
+    : IRequestHandler<GetSnapshotDailySummaryQuery, List<SnapshotDailySummaryDto>>
     {
-        private readonly IApplicationDbContext _db;
+        private readonly IApplicationDbContext _context;
 
-        public GetSnapshotDailySummaryHandler(IApplicationDbContext db)
+        public GetSnapshotDailySummaryHandler(IApplicationDbContext context)
         {
-            _db = db;
+            _context = context;
         }
 
-        public async Task<SnapshotDailySummaryDto> Handle(GetSnapshotDailySummaryQuery request, CancellationToken ct)
+        public async Task<List<SnapshotDailySummaryDto>> Handle(
+            GetSnapshotDailySummaryQuery request,
+            CancellationToken cancellationToken)
         {
-            // 1) snapshot tồn tại?
-            var snapshot = await _db.Snapshots
+            // Optional guard: snapshot tồn tại không?
+            var snapshotExists = await _context.Snapshots
                 .AsNoTracking()
-                .Where(s => s.SnapshotId == request.SnapshotId)
-                .Select(s => new { s.SnapshotId, s.CapturedAt })
-                .SingleOrDefaultAsync(ct);
+                .AnyAsync(s => s.SnapshotId == request.SnapshotId, cancellationToken);
 
-            if (snapshot is null)
-                throw new KeyNotFoundException($"Snapshot {request.SnapshotId} not found.");
+            if (!snapshotExists)
+                return new List<SnapshotDailySummaryDto>();
 
-            // 2) lấy commits thuộc snapshot (đúng snapshot isolation)
-            var rows = await (
-                from sc in _db.SnapshotCommits.AsNoTracking()
-                join c in _db.GitHubCommits.AsNoTracking() on sc.CommitId equals c.CommitId
-                join r in _db.Repositories.AsNoTracking() on c.RepoId equals r.RepoId
-                join u in _db.Users.AsNoTracking() on c.UserId equals u.UserId into users
-                from u in users.DefaultIfEmpty()
+            var query =
+                from sc in _context.SnapshotCommits.AsNoTracking()
+                join c in _context.GitHubCommits.AsNoTracking()
+                    on sc.CommitId equals c.CommitId
                 where sc.SnapshotId == request.SnapshotId
-                select new
-                {
-                    c.CommittedAt,
-                    RepoId = r.RepoId,
-                    AuthorName = u != null
-                        ? (u.FullName ?? u.Email)
-                        : "Unknown"
-                }
-            ).ToListAsync(ct);
-
-            // 3) group theo ngày (có offset nếu cần)
-            var days = rows
-                .GroupBy(x => DateOnly.FromDateTime(x.CommittedAt.AddMinutes(request.TzOffsetMinutes)))
-                .OrderBy(g => g.Key)
-                .Select(g => new SnapshotDailyBucketDto
+                group c by c.CommittedAt.Date into g
+                orderby g.Key
+                select new SnapshotDailySummaryDto
                 {
                     Date = g.Key,
-                    CommitCount = g.Count(),
-                    ActiveRepoCount = g.Select(x => x.RepoId).Distinct().Count(),
-                    TopAuthors = g.GroupBy(x => x.AuthorName)
-                        .Select(ag => new AuthorCountDto(ag.Key, ag.Count()))
-                        .OrderByDescending(a => a.Count)
-                        .ThenBy(a => a.Name)
-                        .Take(5)
-                        .ToList()
-                })
-                .ToList();
+                    TotalCommits = g.Count(),
+                    // user_id có thể null -> Distinct trên nullable là ok
+                    DistinctContributors = g.Select(x => x.UserId).Distinct().Count(),
+                    DistinctRepositories = g.Select(x => x.RepoId).Distinct().Count()
+                };
 
-            return new SnapshotDailySummaryDto
-            {
-                SnapshotId = snapshot.SnapshotId,
-                CapturedAt = snapshot.CapturedAt,
-                Days = days
-            };
+            return await query.ToListAsync(cancellationToken);
         }
     }
 }

@@ -8,6 +8,6 @@ using System.Threading.Tasks;
 
 namespace SWP391.Group2.Application.Features.Snapshots.Queries
 {
-    public sealed record GetSnapshotDailySummaryQuery(int SnapshotId, int TzOffsetMinutes = 0)
-    : IRequest<SnapshotDailySummaryDto>;
+    public record GetSnapshotDailySummaryQuery(int SnapshotId)
+    : IRequest<List<SnapshotDailySummaryDto>>;
 }
