@@ -90,4 +90,17 @@ public class SnapshotsController : ControllerBase
         }
         catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
     }
+
+
+    //[Authorize]
+    [HttpGet("{snapshotId:int}/traceability")]
+    public async Task<IActionResult> GetTraceability(int snapshotId, CancellationToken ct)
+    {
+        try
+        {
+            var result = await _mediator.Send(new GetSnapshotTraceabilityQuery(snapshotId), ct);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
+    }
 }
