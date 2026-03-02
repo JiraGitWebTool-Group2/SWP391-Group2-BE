@@ -95,4 +95,25 @@ public class SnapshotsController : ControllerBase
             return NotFound();
         }
     }
+
+    [HttpGet("{id:int}/traceability-lite")]
+    public async Task<IActionResult> GetTraceabilityLite(
+    [FromRoute] int id,
+    [FromQuery] string? projectKeyPrefix = null,
+    [FromQuery] int top = 50,
+    CancellationToken ct = default)
+    {
+        try
+        {
+            var result = await _mediator.Send(
+                new GetSnapshotTraceabilityLiteQuery(id, projectKeyPrefix, top),
+                ct);
+
+            return Ok(result);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
 }
