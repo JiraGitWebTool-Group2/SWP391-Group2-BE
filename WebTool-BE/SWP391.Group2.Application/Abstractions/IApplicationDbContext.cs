@@ -22,6 +22,7 @@ namespace SWP391.Group2.Application.Abstractions
         DbSet<ProjectIntegration> ProjectIntegrations { get; }
         DbSet<Repository> Repositories { get; }
         DbSet<SnapshotCommit> SnapshotCommits { get; }
+        DbSet<Report> Reports { get; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }

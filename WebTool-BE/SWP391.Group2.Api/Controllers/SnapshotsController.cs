@@ -5,102 +5,103 @@ using SWP391.Group2.Application.Features.Snapshots.Dtos;
 using SWP391.Group2.Application.Features.Snapshots.Queries;
 
 
-namespace SWP391.Group2.Api.Controllers;
-
-[ApiController]
-[Route("api/snapshots")]
-public class SnapshotsController : ControllerBase
+namespace SWP391.Group2.Api.Controllers
 {
-    private readonly IMediator _mediator;
-
-    public SnapshotsController(IMediator mediator)
+    [ApiController]
+    [Route("api/snapshots")]
+    public class SnapshotsController : ControllerBase
     {
-        _mediator = mediator;
-    }
+        private readonly IMediator _mediator;
 
-    // #10: GET /api/groups/{groupId}/snapshots
-    //[HttpGet("{groupId:int}/snapshots")]
-    //public async Task<ActionResult<List<SnapshotListItemDto>>> GetSnapshots(int groupId)
-    //{
-    //    try
-    //    {
-    //        var data = await _mediator.Send(new GetGroupSnapshotsQuery(groupId));
-    //        return Ok(data);
-    //    }
-    //    catch (KeyNotFoundException ex)
-    //    {
-    //        return NotFound(new { message = ex.Message });
-    //    }
-    //}
-
-
-    [Authorize]
-    [HttpGet("{snapshotId:int}/commits")]
-    public async Task<IActionResult> GetCommits(int snapshotId, CancellationToken ct)
-    {
-        try
+        public SnapshotsController(IMediator mediator)
         {
-            var result = await _mediator.Send(new GetSnapshotCommitsQuery(snapshotId), ct);
-
-            // map App DTO -> Api DTO
-            var dto = result.Select(x => new SnapshotCommitItemDto(
-                x.CommitId,
-                x.CommitHash,
-                x.Message,
-                x.CommittedAt,
-                x.CommitUrl,
-                x.RepoId,
-                x.RepoName
-            ));
-
-            return Ok(dto);
+            _mediator = mediator;
         }
-        catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
-    }
 
-    [Authorize]
-    [HttpGet("{snapshotId:int}/repos-summary")]
-    public async Task<IActionResult> GetRepoSummary(int snapshotId, CancellationToken ct)
-    {
-        try
+        // #10: GET /api/groups/{groupId}/snapshots
+        //[HttpGet("{groupId:int}/snapshots")]
+        //public async Task<ActionResult<List<SnapshotListItemDto>>> GetSnapshots(int groupId)
+        //{
+        //    try
+        //    {
+        //        var data = await _mediator.Send(new GetGroupSnapshotsQuery(groupId));
+        //        return Ok(data);
+        //    }
+        //    catch (KeyNotFoundException ex)
+        //    {
+        //        return NotFound(new { message = ex.Message });
+        //    }
+        //}
+
+
+        [Authorize]
+        [HttpGet("{snapshotId:int}/commits")]
+        public async Task<IActionResult> GetCommits(int snapshotId, CancellationToken ct)
         {
-            var result = await _mediator.Send(new GetSnapshotRepoSummaryQuery(snapshotId), ct);
+            try
+            {
+                var result = await _mediator.Send(new GetSnapshotCommitsQuery(snapshotId), ct);
 
-            var dto = result.Select(x => new SnapshotRepoSummaryDto(
-                x.RepoId,
-                x.RepoName,
-                x.CommitCount
-            ));
+                // map App DTO -> Api DTO
+                var dto = result.Select(x => new SnapshotCommitItemDto(
+                    x.CommitId,
+                    x.CommitHash,
+                    x.Message,
+                    x.CommittedAt,
+                    x.CommitUrl,
+                    x.RepoId,
+                    x.RepoName
+                ));
 
-            return Ok(dto);
+                return Ok(dto);
+            }
+            catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
         }
-        catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
-    }
 
-
-    // GET /api/snapshots/{id}/daily-summary
-    [Authorize]
-    [HttpGet("{snapshotId:int}/daily-summary")]
-    public async Task<IActionResult> GetDailySummary(int snapshotId, CancellationToken ct)
-    {
-        try
+        [Authorize]
+        [HttpGet("{snapshotId:int}/repos-summary")]
+        public async Task<IActionResult> GetRepoSummary(int snapshotId, CancellationToken ct)
         {
-            var result = await _mediator.Send(new GetSnapshotDailySummaryQuery(snapshotId), ct);
-            return Ok(result);
+            try
+            {
+                var result = await _mediator.Send(new GetSnapshotRepoSummaryQuery(snapshotId), ct);
+
+                var dto = result.Select(x => new SnapshotRepoSummaryDto(
+                    x.RepoId,
+                    x.RepoName,
+                    x.CommitCount
+                ));
+
+                return Ok(dto);
+            }
+            catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
         }
-        catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
-    }
 
 
-    //[Authorize]
-    [HttpGet("{snapshotId:int}/traceability")]
-    public async Task<IActionResult> GetTraceability(int snapshotId, CancellationToken ct)
-    {
-        try
+        // GET /api/snapshots/{id}/daily-summary
+        [Authorize]
+        [HttpGet("{snapshotId:int}/daily-summary")]
+        public async Task<IActionResult> GetDailySummary(int snapshotId, CancellationToken ct)
         {
-            var result = await _mediator.Send(new GetSnapshotTraceabilityQuery(snapshotId), ct);
-            return Ok(result);
+            try
+            {
+                var result = await _mediator.Send(new GetSnapshotDailySummaryQuery(snapshotId), ct);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
         }
-        catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
+
+
+        //[Authorize]
+        [HttpGet("{snapshotId:int}/traceability")]
+        public async Task<IActionResult> GetTraceability(int snapshotId, CancellationToken ct)
+        {
+            try
+            {
+                var result = await _mediator.Send(new GetSnapshotTraceabilityQuery(snapshotId), ct);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
+        }
     }
 }
