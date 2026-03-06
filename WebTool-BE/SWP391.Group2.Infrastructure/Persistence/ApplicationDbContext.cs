@@ -30,7 +30,7 @@ namespace SWP391.Group2.Infrastructure.Persistence
 
         public DbSet<ProjectIntegration> ProjectIntegrations => Set<ProjectIntegration>();
         public DbSet<Report> Reports => Set<Report>();
-
+        public DbSet<SrsDocument> SrsDocuments => Set<SrsDocument>();
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -306,6 +306,59 @@ namespace SWP391.Group2.Infrastructure.Persistence
                       .WithMany()
                       .HasForeignKey(x => x.SnapshotId)
                       .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<SrsDocument>(entity =>
+            {
+                entity.ToTable("SrsDocuments");
+
+                entity.HasKey(x => x.SrsId);
+
+                entity.Property(x => x.SrsId)
+                    .HasColumnName("srs_id");
+
+                entity.Property(x => x.ProjectId)
+                    .HasColumnName("project_id");
+
+                entity.Property(x => x.CreatedByUserId)
+                    .HasColumnName("created_by_user_id");
+
+                entity.Property(x => x.Version)
+                    .HasColumnName("version");
+
+                entity.Property(x => x.ScopeType)
+                    .HasColumnName("scope_type")
+                    .HasMaxLength(10)
+                    .IsRequired();
+
+                entity.Property(x => x.Title)
+                    .HasColumnName("title")
+                    .HasMaxLength(300)
+                    .IsRequired();
+
+                entity.Property(x => x.Content)
+                    .HasColumnName("content")
+                    .IsRequired();
+
+                entity.Property(x => x.CreatedAt)
+                    .HasColumnName("created_at");
+
+                entity.HasOne(x => x.Project)
+                    .WithMany()
+                    .HasForeignKey(x => x.ProjectId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.CreatedByUser)
+                    .WithMany()
+                    .HasForeignKey(x => x.CreatedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(x => x.ProjectId)
+                    .HasDatabaseName("IX_SrsDocuments_project_id");
+
+                entity.HasIndex(x => new { x.ProjectId, x.Version })
+                    .IsUnique()
+                    .HasDatabaseName("UQ_SrsDocuments_project_version");
             });
         }
     }
