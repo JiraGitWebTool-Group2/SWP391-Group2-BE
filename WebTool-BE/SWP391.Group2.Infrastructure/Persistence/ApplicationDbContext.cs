@@ -29,6 +29,7 @@ namespace SWP391.Group2.Infrastructure.Persistence
         public DbSet<SnapshotCommit> SnapshotCommits => Set<SnapshotCommit>();
 
         public DbSet<ProjectIntegration> ProjectIntegrations => Set<ProjectIntegration>();
+        public DbSet<Report> Reports => Set<Report>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -251,6 +252,60 @@ namespace SWP391.Group2.Infrastructure.Persistence
                 e.Property(x => x.CommitId).HasColumnName("commit_id");
 
                 e.HasIndex(x => new { x.SnapshotId, x.CommitId }).IsUnique();
+            });
+
+            modelBuilder.Entity<Report>(entity =>
+            {
+                entity.ToTable("Reports");
+
+                entity.HasKey(x => x.ReportId);
+
+                entity.Property(x => x.ReportId)
+                      .HasColumnName("report_id");
+
+                entity.Property(x => x.ProjectId)
+                      .HasColumnName("project_id");
+
+                entity.Property(x => x.CreatedByUserId)
+                      .HasColumnName("created_by_user_id");
+
+                entity.Property(x => x.SnapshotId)
+                      .HasColumnName("snapshot_id");
+
+                entity.Property(x => x.Title)
+                      .HasColumnName("title")
+                      .HasMaxLength(300)
+                      .IsRequired();
+
+                entity.Property(x => x.Content)
+                      .HasColumnName("content")
+                      .IsRequired();
+
+                entity.Property(x => x.Status)
+                      .HasColumnName("status")
+                      .HasMaxLength(10)
+                      .IsRequired();
+
+                entity.Property(x => x.CreatedAt)
+                      .HasColumnName("created_at");
+
+                entity.Property(x => x.UpdatedAt)
+                      .HasColumnName("updated_at");
+
+                entity.HasOne(x => x.Project)
+                      .WithMany()
+                      .HasForeignKey(x => x.ProjectId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.CreatedByUser)
+                      .WithMany()
+                      .HasForeignKey(x => x.CreatedByUserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.Snapshot)
+                      .WithMany()
+                      .HasForeignKey(x => x.SnapshotId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

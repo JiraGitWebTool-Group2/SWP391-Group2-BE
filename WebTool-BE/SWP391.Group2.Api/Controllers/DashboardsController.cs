@@ -3,31 +3,32 @@ using Microsoft.AspNetCore.Mvc;
 using SWP391.Group2.Application.Features.Dashboards.Dtos;
 using SWP391.Group2.Application.Features.Dashboards.Queries;
 
-namespace SWP391.Group2.Api.Controllers;
-
-[ApiController]
-[Route("api/groups")]
-public class DashboardController : ControllerBase
+namespace SWP391.Group2.Api.Controllers
 {
-    private readonly IMediator _mediator;
-
-    public DashboardController(IMediator mediator)
+    [ApiController]
+    [Route("api/groups")]
+    public class DashboardController : ControllerBase
     {
-        _mediator = mediator;
-    }
+        private readonly IMediator _mediator;
 
-    // #11: GET /api/groups/{groupId}/dashboard
-    [HttpGet("{groupId:int}/dashboard")]
-    public async Task<ActionResult<DashboardDto>> GetDashboard(int groupId)
-    {
-        try
+        public DashboardController(IMediator mediator)
         {
-            var dto = await _mediator.Send(new GetDashboardQuery(groupId));
-            return Ok(dto);
+            _mediator = mediator;
         }
-        catch (KeyNotFoundException ex)
+
+        // #11: GET /api/groups/{groupId}/dashboard
+        [HttpGet("{groupId:int}/dashboard")]
+        public async Task<ActionResult<DashboardDto>> GetDashboard(int groupId)
         {
-            return NotFound(new { message = ex.Message });
+            try
+            {
+                var dto = await _mediator.Send(new GetDashboardQuery(groupId));
+                return Ok(dto);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
         }
     }
 }
