@@ -24,6 +24,9 @@ namespace SWP391.Group2.Application.Abstractions
         DbSet<SnapshotCommit> SnapshotCommits { get; }
         DbSet<Report> Reports { get; }
         DbSet<SrsDocument> SrsDocuments { get; }
+        DbSet<Semester> Semesters { get; }
+        DbSet<Class> Classes { get; }
+        DbSet<ClassStudent> ClassStudents { get; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }

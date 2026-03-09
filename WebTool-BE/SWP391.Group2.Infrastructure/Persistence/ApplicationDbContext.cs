@@ -31,6 +31,9 @@ namespace SWP391.Group2.Infrastructure.Persistence
         public DbSet<ProjectIntegration> ProjectIntegrations => Set<ProjectIntegration>();
         public DbSet<Report> Reports => Set<Report>();
         public DbSet<SrsDocument> SrsDocuments => Set<SrsDocument>();
+        public DbSet<Semester> Semesters => Set<Semester>();
+        public DbSet<Class> Classes => Set<Class>();
+        public DbSet<ClassStudent> ClassStudents => Set<ClassStudent>();
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -61,6 +64,11 @@ namespace SWP391.Group2.Infrastructure.Persistence
                 entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
 
                 entity.Property(x => x.ProviderUserId).HasColumnName("provider_user_id").HasMaxLength(200);
+
+                entity.Property(x => x.SystemRole)
+                        .HasColumnName("system_role")
+                        .HasMaxLength(20)
+                        .IsRequired();
             });
 
             modelBuilder.Entity<RefreshToken>(entity =>
@@ -359,6 +367,78 @@ namespace SWP391.Group2.Infrastructure.Persistence
                 entity.HasIndex(x => new { x.ProjectId, x.Version })
                     .IsUnique()
                     .HasDatabaseName("UQ_SrsDocuments_project_version");
+            });
+
+            modelBuilder.Entity<Semester>(entity =>
+            {
+                entity.ToTable("Semesters", "dbo");
+
+                entity.HasKey(x => x.SemesterId);
+
+                entity.Property(x => x.SemesterId).HasColumnName("semester_id");
+                entity.Property(x => x.Code).HasColumnName("code").HasMaxLength(20).IsRequired();
+                entity.Property(x => x.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                entity.Property(x => x.StartDate).HasColumnName("start_date");
+                entity.Property(x => x.EndDate).HasColumnName("end_date");
+                entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
+                entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+                entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(x => x.Code).IsUnique();
+            });
+
+            modelBuilder.Entity<Class>(entity =>
+            {
+                entity.ToTable("Classes", "dbo");
+
+                entity.HasKey(x => x.ClassId);
+
+                entity.Property(x => x.ClassId).HasColumnName("class_id");
+                entity.Property(x => x.SemesterId).HasColumnName("semester_id");
+                entity.Property(x => x.ClassCode).HasColumnName("class_code").HasMaxLength(50).IsRequired();
+                entity.Property(x => x.CourseCode).HasColumnName("course_code").HasMaxLength(50).IsRequired();
+                entity.Property(x => x.ClassName).HasColumnName("class_name").HasMaxLength(200);
+                entity.Property(x => x.LecturerUserId).HasColumnName("lecturer_user_id");
+                entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
+                entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+                entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(x => x.SemesterId);
+
+                entity.HasOne(x => x.Semester)
+                    .WithMany()
+                    .HasForeignKey(x => x.SemesterId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(x => new { x.SemesterId, x.CourseCode, x.ClassCode })
+                    .IsUnique();
+            });
+
+            modelBuilder.Entity<ClassStudent>(entity =>
+            {
+                entity.ToTable("ClassStudents", "dbo");
+
+                entity.HasKey(x => x.ClassStudentId);
+
+                entity.Property(x => x.ClassStudentId).HasColumnName("class_student_id");
+                entity.Property(x => x.ClassId).HasColumnName("class_id");
+                entity.Property(x => x.UserId).HasColumnName("user_id");
+                entity.Property(x => x.JoinedAt).HasColumnName("joined_at");
+                entity.Property(x => x.IsActive).HasColumnName("is_active");
+
+                entity.HasIndex(x => x.ClassId);
+                entity.HasIndex(x => x.UserId);
+                entity.HasIndex(x => new { x.ClassId, x.UserId }).IsUnique();
+
+                entity.HasOne(x => x.Class)
+                    .WithMany()
+                    .HasForeignKey(x => x.ClassId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.User)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }
