@@ -233,11 +233,27 @@ public class ClassesController : ControllerBase
             StudentName = result.StudentName,
             StudentRole = result.StudentRole,
             JoinedAt = result.JoinedAt,
-            IsActive = result.IsActive
+            IsActive = result.IsActive,
+
+            GroupId = result.GroupId,
+            GroupName = result.GroupName
         };
 
         return Ok(response);
     }
+
+    //[HttpPost("{classId:int}/students")]
+    //public async Task<IActionResult> AssignStudentToClass(
+    //int classId,
+    //[FromBody] AssignStudentRequest request,
+    //CancellationToken cancellationToken)
+    //{
+    //    var result = await _mediator.Send(
+    //        new AssignStudentToClassCommand(classId, request.StudentId),
+    //        cancellationToken);
+
+    //    return Ok(result);
+    //}
 
     [HttpPost("{classId:int}/students/bulk")]
     public async Task<IActionResult> AssignStudentsToClassBulk(
@@ -280,11 +296,26 @@ public class ClassesController : ControllerBase
             StudentName = x.StudentName,
             StudentRole = x.StudentRole,
             JoinedAt = x.JoinedAt,
-            IsActive = x.IsActive
+            IsActive = x.IsActive,
+            
+            GroupId = x.GroupId,
+            GroupName = x.GroupName
         });
 
         return Ok(response);
     }
+
+    //[HttpGet("{classId:int}/students")]
+    //public async Task<IActionResult> GetClassStudents(
+    //int classId,
+    //CancellationToken cancellationToken)
+    //{
+    //    var result = await _mediator.Send(
+    //        new GetClassStudentsQuery(classId),
+    //        cancellationToken);
+
+    //    return Ok(result);
+    //}
 
     [HttpDelete("{classId:int}/students/{studentId:int}")]
     public async Task<IActionResult> RemoveStudentFromClass(
@@ -304,4 +335,12 @@ public class ClassesController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpGet("{classId}/groups")]
+    public async Task<IActionResult> GetGroups(int classId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetClassGroupQuery(classId), ct);
+        return Ok(result);
+    }
+
 }

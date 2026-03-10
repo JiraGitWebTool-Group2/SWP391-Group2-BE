@@ -9,4 +9,8 @@ public class ClassStudentDto
     public string StudentRole { get; set; } = null!;
     public DateTime JoinedAt { get; set; }
     public bool IsActive { get; set; }
+
+    public int? GroupId { get; set; }      
+
+    public string? GroupName { get; set; } 
 }

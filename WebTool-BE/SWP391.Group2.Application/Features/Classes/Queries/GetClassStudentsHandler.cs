@@ -14,6 +14,35 @@ public class GetClassStudentsHandler : IRequestHandler<GetClassStudentsQuery, Li
         _context = context;
     }
 
+    //public async Task<List<ClassStudentDto>> Handle(GetClassStudentsQuery request, CancellationToken cancellationToken)
+    //{
+    //    var classExists = await _context.Classes
+    //        .AnyAsync(x => x.ClassId == request.ClassId, cancellationToken);
+
+    //    if (!classExists)
+    //        throw new ArgumentException($"Class with id {request.ClassId} was not found.");
+
+    //    return await _context.ClassStudents
+    //        .AsNoTracking()
+    //        .Where(x => x.ClassId == request.ClassId && x.IsActive)
+    //        .Join(
+    //            _context.Users.AsNoTracking(),
+    //            cs => cs.UserId,
+    //            u => u.UserId,
+    //            (cs, u) => new ClassStudentDto
+    //            {
+    //                ClassId = cs.ClassId,
+    //                StudentId = u.UserId,
+    //                StudentEmail = u.Email,
+    //                StudentName = u.FullName,
+    //                StudentRole = u.System_Role,
+    //                JoinedAt = cs.JoinedAt,
+    //                IsActive = cs.IsActive
+    //            })
+    //        .OrderBy(x => x.StudentName)
+    //        .ToListAsync(cancellationToken);
+    //}
+
     public async Task<List<ClassStudentDto>> Handle(GetClassStudentsQuery request, CancellationToken cancellationToken)
     {
         var classExists = await _context.Classes
@@ -22,24 +51,36 @@ public class GetClassStudentsHandler : IRequestHandler<GetClassStudentsQuery, Li
         if (!classExists)
             throw new ArgumentException($"Class with id {request.ClassId} was not found.");
 
-        return await _context.ClassStudents
-            .AsNoTracking()
-            .Where(x => x.ClassId == request.ClassId && x.IsActive)
-            .Join(
-                _context.Users.AsNoTracking(),
-                cs => cs.UserId,
-                u => u.UserId,
-                (cs, u) => new ClassStudentDto
-                {
-                    ClassId = cs.ClassId,
-                    StudentId = u.UserId,
-                    StudentEmail = u.Email,
-                    StudentName = u.FullName,
-                    StudentRole = u.System_Role,
-                    JoinedAt = cs.JoinedAt,
-                    IsActive = cs.IsActive
-                })
-            .OrderBy(x => x.StudentName)
-            .ToListAsync(cancellationToken);
+        return await (
+            from cs in _context.ClassStudents.AsNoTracking()
+            join u in _context.Users.AsNoTracking()
+                on cs.UserId equals u.UserId
+
+            join ug in _context.UserGroups.AsNoTracking()
+                on u.UserId equals ug.UserId into ugJoin
+            from ug in ugJoin.DefaultIfEmpty()
+
+            join g in _context.Groups.AsNoTracking()
+                on ug.GroupId equals g.GroupId into gJoin
+            from g in gJoin.DefaultIfEmpty()
+
+            where cs.ClassId == request.ClassId && cs.IsActive
+
+            select new ClassStudentDto
+            {
+                ClassId = cs.ClassId,
+                StudentId = u.UserId,
+                StudentEmail = u.Email,
+                StudentName = u.FullName,
+                StudentRole = u.System_Role,
+                JoinedAt = cs.JoinedAt,
+                IsActive = cs.IsActive,
+
+                GroupId = g != null ? g.GroupId : null,
+                GroupName = g != null ? g.GroupName : null
+            }
+        )
+        .OrderBy(x => x.StudentName)
+        .ToListAsync(cancellationToken);
     }
 }
