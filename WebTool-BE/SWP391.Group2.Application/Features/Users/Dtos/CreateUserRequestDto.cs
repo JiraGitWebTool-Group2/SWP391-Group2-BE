@@ -26,5 +26,8 @@ namespace SWP391.Group2.Application.Features.Users.Dtos
         // GOOGLE: sub, GITHUB: id/login (tuỳ bạn lưu gì)
         [StringLength(255)]
         public string? ProviderUserId { get; set; }
+
+        [Required]
+        public string Role { get; set; }
     }
 }

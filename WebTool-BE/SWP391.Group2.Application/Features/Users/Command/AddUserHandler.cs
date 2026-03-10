@@ -25,6 +25,12 @@ namespace SWP391.Group2.Application.Features.Users.Command
 
             var email = req.Email.Trim().ToLowerInvariant();
             var fullName = req.FullName.Trim();
+            var role = string.IsNullOrWhiteSpace(req.Role)
+                ? "STUDENT"
+                : req.Role.Trim().ToUpperInvariant();
+
+            if (role is not ("ADMIN" or "LECTURER" or "STUDENT"))
+                throw new ArgumentException("Role không hợp lệ. Chỉ nhận ADMIN/LECTURER/STUDENT.");
             var provider = string.IsNullOrWhiteSpace(req.Provider) ? "LOCAL" : req.Provider.Trim().ToUpperInvariant();
             var providerUserId = string.IsNullOrWhiteSpace(req.ProviderUserId) ? null : req.ProviderUserId.Trim();
 
@@ -58,6 +64,7 @@ namespace SWP391.Group2.Application.Features.Users.Command
                 FullName = fullName,
                 Provider = provider,
                 ProviderUserId = providerUserId,
+                System_Role = role, // THÊM DÒNG NÀY
                 IsActive = true,
                 CreatedAt = now,
                 UpdatedAt = now
@@ -87,6 +94,7 @@ namespace SWP391.Group2.Application.Features.Users.Command
                 FullName = user.FullName,
                 Provider = user.Provider,
                 ProviderUserId = user.ProviderUserId,
+                System_Role = user.System_Role, // THÊM
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt

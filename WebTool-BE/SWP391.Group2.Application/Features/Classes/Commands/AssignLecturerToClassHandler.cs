@@ -28,7 +28,7 @@ public class AssignLecturerToClassHandler : IRequestHandler<AssignLecturerToClas
         if (lecturer == null)
             throw new ArgumentException($"Lecturer with id {request.LecturerId} was not found.");
 
-        if (!string.Equals(lecturer.SystemRole, "LECTURER", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(lecturer.System_Role, "LECTURER", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"User with id {request.LecturerId} is not a lecturer.");
 
         classEntity.LecturerUserId = lecturer.UserId;
@@ -42,7 +42,7 @@ public class AssignLecturerToClassHandler : IRequestHandler<AssignLecturerToClas
             LecturerId = lecturer.UserId,
             LecturerEmail = lecturer.Email,
             LecturerName = lecturer.FullName,
-            LecturerRole = lecturer.SystemRole
+            LecturerRole = lecturer.System_Role
         };
     }
 }

@@ -3,11 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using SWP391.Group2.Application.Abstractions;
 using SWP391.Group2.Application.Abstractions.Auth;
 using SWP391.Group2.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SWP391.Group2.Application.Features.Auth.Command
 {
@@ -32,19 +27,43 @@ namespace SWP391.Group2.Application.Features.Auth.Command
             if (string.IsNullOrWhiteSpace(request.IdToken))
                 throw new ArgumentException("IdToken is required.");
 
+            // Validate Google token
             var googleUser = await _google.ValidateAsync(request.IdToken, ct);
+
+            // Validate role
+            var role = request.Role?.Trim().ToUpper() ?? "STUDENT";
+
+            if (role != "ADMIN" && role != "LECTURER" && role != "STUDENT")
+                throw new ArgumentException("Invalid role.");
 
             var emailLower = googleUser.Email.Trim().ToLowerInvariant();
 
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == emailLower, ct);
+            // Find user
+            var user = await _db.Users
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == emailLower, ct);
+
+            // Create user if not exist
             if (user is null)
-                throw new UnauthorizedAccessException("Email not in whitelist.");
+            {
+                user = new User
+                {
+                    Email = emailLower,
+                    FullName = googleUser.FullName,
+                    Provider = "GOOGLE",
+                    System_Role = role,
+                    IsActive = true
+                };
 
-            if (!user.IsActive)
-                throw new UnauthorizedAccessException("User inactive.");
+                _db.Users.Add(user);
+                await _db.SaveChangesAsync(ct);
+            }
 
-            // Optional: update provider + name (nhẹ nhàng)
+            if (user.System_Role != role)
+                throw new UnauthorizedAccessException("Role mismatch.");
+
+            // Update provider if missing
             user.Provider ??= "GOOGLE";
+
             if (!string.IsNullOrWhiteSpace(googleUser.FullName) && string.IsNullOrWhiteSpace(user.FullName))
                 user.FullName = googleUser.FullName;
 
@@ -53,14 +72,14 @@ namespace SWP391.Group2.Application.Features.Auth.Command
             var refreshToken = _tokens.GenerateRefreshToken();
             var pair = new TokenPair(accessToken, refreshToken);
 
-            // Store refresh token hash
+            // Store refresh token
             var refreshHash = _tokens.HashRefreshToken(pair.RefreshToken);
 
             _db.RefreshTokens.Add(new RefreshToken
             {
                 UserId = user.UserId,
                 TokenHash = refreshHash,
-                ExpiresAt = DateTime.UtcNow.AddDays(14) // lát nữa đưa ra config
+                ExpiresAt = DateTime.UtcNow.AddDays(14)
             });
 
             await _db.SaveChangesAsync(ct);

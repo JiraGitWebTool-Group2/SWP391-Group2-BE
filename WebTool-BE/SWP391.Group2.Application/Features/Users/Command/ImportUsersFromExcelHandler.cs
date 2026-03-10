@@ -41,13 +41,13 @@ namespace SWP391.Group2.Application.Features.Users.Command
             var rows = used.RowsUsed().ToList();
             if (rows.Count == 0) return result;
 
-            // Detect header: Username | Password | Fullname (tùy có/không)
-            var startIndex = 0;
+            //Detect header: Username | Password | Fullname (tùy có/không)
+            var startIndex = 1;
             {
                 var h1 = rows[0].Cell(1).GetString().Trim().ToLowerInvariant();
                 var h2 = rows[0].Cell(2).GetString().Trim().ToLowerInvariant();
                 var h3 = rows[0].Cell(3).GetString().Trim().ToLowerInvariant();
-                if (h1.Contains("username") && h2.Contains("password") && (h3.Contains("fullname") || h3.Contains("full name")))
+                if (h1.Contains("username") && h2.Contains("system_role") && (h3.Contains("fullname") || h3.Contains("full name")))
                     startIndex = 1;
             }
 
@@ -67,12 +67,12 @@ namespace SWP391.Group2.Application.Features.Users.Command
 
                 // Excel yêu cầu 3 cột: A Username, B Password, C Fullname
                 var username = row.Cell(1).GetString().Trim();
-                var password = row.Cell(2).GetString(); // raw để hash
+                var system_role = row.Cell(2).GetString().Trim().ToUpper(); // raw để hash
                 var fullName = row.Cell(3).GetString().Trim();
 
                 // bỏ dòng trống hoàn toàn
                 if (string.IsNullOrWhiteSpace(username) &&
-                    string.IsNullOrWhiteSpace(password) &&
+                    string.IsNullOrWhiteSpace(system_role) &&
                     string.IsNullOrWhiteSpace(fullName))
                     continue;
 
@@ -102,14 +102,13 @@ namespace SWP391.Group2.Application.Features.Users.Command
                     continue;
                 }
 
-                if (string.IsNullOrWhiteSpace(password) || password.Trim().Length < 6)
+                if (string.IsNullOrWhiteSpace(system_role))
                 {
                     result.Skipped++;
                     result.Errors.Add(new ImportUsersExcelRowErrorDto
                     {
                         RowNumber = rowNumber,
                         Username = username,
-                        Error = "Password trống hoặc < 6 ký tự."
                     });
                     continue;
                 }
@@ -130,12 +129,25 @@ namespace SWP391.Group2.Application.Features.Users.Command
                     continue;
                 }
 
+                if (system_role != "ADMIN" && system_role != "LECTURER" && system_role != "STUDENT")
+                {
+                    result.Skipped++;
+                    result.Errors.Add(new ImportUsersExcelRowErrorDto
+                    {
+                        RowNumber = rowNumber,
+                        Username = username,
+                        Error = "Role không hợp lệ."
+                    });
+                    continue;
+                }
+
                 var now = DateTime.UtcNow;
 
                 var user = new User
                 {
                     Email = username,       // map Username -> Email
                     FullName = fullName,
+                    System_Role = system_role,
                     Provider = "LOCAL",
                     ProviderUserId = null,
                     IsActive = true,
@@ -143,7 +155,7 @@ namespace SWP391.Group2.Application.Features.Users.Command
                     UpdatedAt = now
                 };
 
-                user.PasswordHash = _hasher.HashPassword(user, password.Trim());
+                //user.PasswordHash = _hasher.HashPassword(user, password.Trim());
 
                 toInsert.Add(user);
                 existingSet.Add(emailKey);
