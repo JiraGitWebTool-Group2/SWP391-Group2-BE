@@ -8,7 +8,5 @@ using System.Threading.Tasks;
 
 namespace SWP391.Group2.Application.Features.Integrations.Queries
 {
-    //public record GetProjectIntegrationQuery(int GroupId, int ProjectId) : IRequest<ProjectIntegrationDto?>;
-
     public record GetProjectIntegrationQuery(int ProjectId, string Provider) : IRequest<IntegrationDto>;
 }

@@ -36,11 +36,16 @@ namespace SWP391.Group2.Infrastructure.Integrations.Jira
             // Jira Cloud: /rest/api/3/search
             // fields chọn vừa đủ để nhẹ payload
             var fields = "summary,description,issuetype,priority,status,customfield_10016,assignee";
-            var url =
-                $"{baseUrl}/rest/api/3/search" +
-                $"?jql={Uri.EscapeDataString(jql)}" +
-                $"&maxResults={maxResults}" +
-                $"&fields={Uri.EscapeDataString(fields)}";
+            //var url =
+            //    $"{baseUrl}/rest/api/3/search" +
+            //    $"?jql={Uri.EscapeDataString(jql)}" +
+            //    $"&maxResults={maxResults}" +
+            //    $"&fields={Uri.EscapeDataString(fields)}";
+                var url =
+                    $"{baseUrl}/rest/api/3/search/jql" +
+                    $"?jql={Uri.EscapeDataString(jql)}" +
+                    $"&maxResults={maxResults}" +
+                    $"&fields={Uri.EscapeDataString(fields)}";
 
             using var req = new HttpRequestMessage(HttpMethod.Get, url);
 

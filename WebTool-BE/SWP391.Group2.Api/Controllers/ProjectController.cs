@@ -60,13 +60,13 @@ namespace SWP391.Group2.Api.Controllers
             catch (InvalidOperationException ex) { return Conflict(ex.Message); }
         }
 
-        [HttpGet("{projectId}")]
-        public async Task<IActionResult> GetProjectById(int projectId)
-        {
-            var result = await _mediator.Send(
-                new GetProjectByIdQuery(projectId));
+        //[HttpGet("{projectId}")]
+        //public async Task<IActionResult> GetProjectById(int projectId)
+        //{
+        //    var result = await _mediator.Send(
+        //        new GetProjectByIdQuery(projectId));
 
-            return Ok(result);
-        }
+        //    return Ok(result);
+        //}
     }
 }
