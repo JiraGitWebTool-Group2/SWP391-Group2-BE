@@ -24,23 +24,33 @@ namespace SWP391.Group2.Application.Features.Integrations.Commands
         {
             var provider = NormalizeProvider(request.Provider);
 
-            // Validate tối thiểu theo provider
-            if (provider == "JIRA")
-            {
-                if (string.IsNullOrWhiteSpace(request.BaseUrl))
-                    throw new ArgumentException("Jira BaseUrl is required.");
-                if (string.IsNullOrWhiteSpace(request.ProjectKey))
-                    throw new ArgumentException("Jira ProjectKey is required.");
-            }
+            ValidateByProvider(
+                provider,
+                request.BaseUrl,
+                request.ProjectKey,
+                request.Org);
 
-            if (provider == "GITHUB")
+            var projectExists = await _db.Projects
+                .AnyAsync(p => p.ProjectId == request.ProjectId, ct);
+
+            if (!projectExists)
+                throw new ArgumentException("Project not found.");
+
+            if (request.CreatedByUserId.HasValue)
             {
-                if (string.IsNullOrWhiteSpace(request.Org))
-                    throw new ArgumentException("GitHub Org is required.");
+                var userExists = await _db.Users
+                    .AnyAsync(u => u.UserId == request.CreatedByUserId.Value, ct);
+
+                if (!userExists)
+                    throw new ArgumentException("CreatedByUser not found.");
             }
 
             var entity = await _db.ProjectIntegrations
-                .FirstOrDefaultAsync(x => x.ProjectId == request.ProjectId && x.Provider == provider, ct);
+                .FirstOrDefaultAsync(
+                    x => x.ProjectId == request.ProjectId && x.Provider == provider,
+                    ct);
+
+            var now = DateTime.UtcNow;
 
             if (entity is null)
             {
@@ -48,8 +58,8 @@ namespace SWP391.Group2.Application.Features.Integrations.Commands
                 {
                     ProjectId = request.ProjectId,
                     Provider = provider,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    CreatedAt = now,
+                    UpdatedAt = now
                 };
 
                 _db.ProjectIntegrations.Add(entity);
@@ -58,32 +68,72 @@ namespace SWP391.Group2.Application.Features.Integrations.Commands
             entity.BaseUrl = request.BaseUrl?.Trim();
             entity.ProjectKey = request.ProjectKey?.Trim();
             entity.Org = request.Org?.Trim();
+            entity.CreatedByUserId = request.CreatedByUserId;
+            entity.LinkedAccount = request.LinkedAccount?.Trim();
+            entity.VisibilityStatus = request.VisibilityStatus?.Trim();
+            entity.LastVerifiedAt = request.LastVerifiedAt;
+            entity.VerificationNote = request.VerificationNote?.Trim();
 
-            // Demo: lưu plain vào token_encrypted. Sau này bạn thay bằng encrypt/hashing.
             if (!string.IsNullOrWhiteSpace(request.Token))
                 entity.TokenEncrypted = request.Token.Trim();
 
-            entity.UpdatedAt = DateTime.UtcNow;
+            entity.UpdatedAt = now;
 
             await _db.SaveChangesAsync(ct);
 
+            return ToDto(entity);
+        }
+
+        private static string NormalizeProvider(string provider)
+        {
+            var p = (provider ?? string.Empty).Trim().ToUpperInvariant();
+
+            if (p is not ("JIRA" or "GITHUB"))
+                throw new ArgumentException("Provider must be JIRA or GITHUB.");
+
+            return p;
+        }
+
+        private static void ValidateByProvider(
+            string provider,
+            string? baseUrl,
+            string? projectKey,
+            string? org)
+        {
+            if (provider == "JIRA")
+            {
+                if (string.IsNullOrWhiteSpace(baseUrl))
+                    throw new ArgumentException("Jira BaseUrl is required.");
+
+                if (string.IsNullOrWhiteSpace(projectKey))
+                    throw new ArgumentException("Jira ProjectKey is required.");
+            }
+
+            if (provider == "GITHUB")
+            {
+                if (string.IsNullOrWhiteSpace(org))
+                    throw new ArgumentException("GitHub Org is required.");
+            }
+        }
+
+        private static IntegrationDto ToDto(ProjectIntegration entity)
+        {
             return new IntegrationDto(
+                entity.IntegrationId,
                 entity.ProjectId,
                 entity.Provider,
                 entity.BaseUrl,
                 entity.ProjectKey,
                 entity.Org,
                 !string.IsNullOrWhiteSpace(entity.TokenEncrypted),
+                entity.CreatedByUserId,
+                entity.LinkedAccount,
+                entity.VisibilityStatus,
+                entity.LastVerifiedAt,
+                entity.VerificationNote,
+                entity.CreatedAt,
                 entity.UpdatedAt
             );
-        }
-
-        private static string NormalizeProvider(string provider)
-        {
-            var p = (provider ?? "").Trim().ToUpperInvariant();
-            if (p is not ("JIRA" or "GITHUB"))
-                throw new ArgumentException("Provider must be JIRA or GITHUB.");
-            return p;
         }
     }
 }
