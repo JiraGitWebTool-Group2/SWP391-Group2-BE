@@ -23,11 +23,21 @@ namespace SWP391.Group2.Application.Features.Groups.Commands
         public async Task<GroupDto> Handle(CreateGroupCommand request, CancellationToken cancellationToken)
         {
             var name = (request.GroupName ?? "").Trim();
+
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("GroupName is required.");
 
-            // DB có UNIQUE(group_name) nên check trước cho đỡ nổ SQL exception
-            var exists = await _db.Groups.AnyAsync(g => g.GroupName == name, cancellationToken);
+            // check class tồn tại
+            var classExists = await _db.Classes
+                .AnyAsync(c => c.ClassId == request.ClassId, cancellationToken);
+
+            if (!classExists)
+                throw new InvalidOperationException("Class not found.");
+
+            // check duplicate group name
+            var exists = await _db.Groups
+                .AnyAsync(g => g.GroupName == name, cancellationToken);
+
             if (exists)
                 throw new InvalidOperationException("Group name already exists.");
 
@@ -35,15 +45,20 @@ namespace SWP391.Group2.Application.Features.Groups.Commands
             {
                 GroupName = name,
                 Description = request.Description,
+                ClassId = request.ClassId,
                 CreatedAt = DateTime.UtcNow
-                // CreatedAt: DB default SYSDATETIME() đã set, nhưng entity vẫn cần value để DTO trả về.
-                // Nếu bạn muốn chính xác theo DB, có thể query lại sau SaveChanges.
             };
 
             _db.Groups.Add(entity);
             await _db.SaveChangesAsync(cancellationToken);
 
-            return new GroupDto(entity.GroupId, entity.GroupName, entity.Description, entity.CreatedAt);
+            return new GroupDto(
+                entity.GroupId,
+                entity.GroupName,
+                entity.Description,
+                entity.ClassId,
+                entity.CreatedAt
+            );
         }
     }
 }
