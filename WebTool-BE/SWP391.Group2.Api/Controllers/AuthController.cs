@@ -26,7 +26,7 @@ namespace SWP391.Group2.Api.Controllers
         {
             try
             {
-                var pair = await _mediator.Send(new GoogleLoginCommand(req.IdToken), ct);
+                var pair = await _mediator.Send(new GoogleLoginCommand(req.IdToken, req.Role), ct);
                 return Ok(new TokenResponse(pair.AccessToken, pair.RefreshToken));
             }
             catch (ArgumentException ex) { return BadRequest(ex.Message); }

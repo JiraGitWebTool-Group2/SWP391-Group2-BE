@@ -35,7 +35,7 @@ public class GetClassStudentsHandler : IRequestHandler<GetClassStudentsQuery, Li
                     StudentId = u.UserId,
                     StudentEmail = u.Email,
                     StudentName = u.FullName,
-                    StudentRole = u.SystemRole,
+                    StudentRole = u.System_Role,
                     JoinedAt = cs.JoinedAt,
                     IsActive = cs.IsActive
                 })

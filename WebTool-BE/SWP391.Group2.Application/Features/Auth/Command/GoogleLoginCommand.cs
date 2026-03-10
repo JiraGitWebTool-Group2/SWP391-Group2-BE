@@ -8,5 +8,5 @@ using System.Threading.Tasks;
 
 namespace SWP391.Group2.Application.Features.Auth.Command
 {
-    public record GoogleLoginCommand(string IdToken) : IRequest<TokenPair>;
+    public record GoogleLoginCommand(string IdToken, string Role) : IRequest<TokenPair>;
 }

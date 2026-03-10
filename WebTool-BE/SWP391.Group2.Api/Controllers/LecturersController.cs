@@ -34,4 +34,31 @@ public class LecturersController : ControllerBase
 
         return Ok(response);
     }
+
+    [HttpGet("{lecturerId}")]
+    public async Task<IActionResult> GetLecturerDetail(
+    int lecturerId,
+    CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(
+            new GetLecturerDetailQuery(lecturerId),
+            cancellationToken);
+
+        if (result == null)
+            return NotFound();
+
+        return Ok(result);
+    }
+
+    [HttpGet("{lecturerId}/classes")]
+    public async Task<IActionResult> GetLecturerClasses(
+        int lecturerId,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(
+            new GetLecturerClassesQuery(lecturerId),
+            cancellationToken);
+
+        return Ok(result);
+    }
 }

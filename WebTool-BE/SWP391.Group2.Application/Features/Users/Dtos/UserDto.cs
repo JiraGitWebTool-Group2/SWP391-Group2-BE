@@ -14,6 +14,7 @@ namespace SWP391.Group2.Application.Features.Users.Dtos
         public string? Provider { get; set; }
         public string? ProviderUserId { get; set; }
         public bool IsActive { get; set; }
+        public string System_Role { get; set; } = default!;
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }

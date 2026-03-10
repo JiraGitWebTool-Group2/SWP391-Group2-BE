@@ -69,7 +69,7 @@ namespace SWP391.Group2.Infrastructure.Persistence
 
                 entity.Property(x => x.ProviderUserId).HasColumnName("provider_user_id").HasMaxLength(200);
 
-                entity.Property(x => x.SystemRole)
+                entity.Property(x => x.System_Role)
                         .HasColumnName("system_role")
                         .HasMaxLength(20)
                         .IsRequired();

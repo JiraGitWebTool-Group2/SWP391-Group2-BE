@@ -16,7 +16,7 @@ namespace SWP391.Group2.Domain.Entities
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        public string SystemRole { get; set; } = "STUDENT";
+        public string System_Role { get; set; } = "STUDENT";
 
         public string? ProviderUserId { get; set; } // Google "sub"
         // Navigation
