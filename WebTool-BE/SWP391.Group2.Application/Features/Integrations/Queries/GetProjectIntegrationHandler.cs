@@ -19,47 +19,45 @@ namespace SWP391.Group2.Application.Features.Integrations.Queries
             _db = db;
         }
 
-        //public async Task<ProjectIntegrationDto?> Handle(GetProjectIntegrationQuery request, CancellationToken cancellationToken)
-        //{
-        //    return await _db.Projects.AsNoTracking()
-        //        .Where(p => p.ProjectId == request.ProjectId && p.GroupId == request.GroupId)
-        //        .Select(p => new ProjectIntegrationDto(
-        //            p.ProjectId,
-        //            p.GroupId,
-        //            p.ProjectName,
-        //            p.JiraProjectKey,
-        //            p.GithubOrg
-        //        ))
-        //        .FirstOrDefaultAsync(cancellationToken);
-        //}
-
         public async Task<IntegrationDto> Handle(GetProjectIntegrationQuery request, CancellationToken ct)
-    {
-        var provider = NormalizeProvider(request.Provider);
+        {
+            var provider = NormalizeProvider(request.Provider);
 
-        var entity = await _db.ProjectIntegrations.AsNoTracking()
-            .FirstOrDefaultAsync(x => x.ProjectId == request.ProjectId && x.Provider == provider, ct);
+            var entity = await _db.ProjectIntegrations
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    x => x.ProjectId == request.ProjectId && x.Provider == provider,
+                    ct);
 
-        if (entity is null)
-            throw new KeyNotFoundException("Integration config not found.");
+            if (entity is null)
+                throw new KeyNotFoundException("Integration config not found.");
 
-        return new IntegrationDto(
-            entity.ProjectId,
-            entity.Provider,
-            entity.BaseUrl,
-            entity.ProjectKey,
-            entity.Org,
-            !string.IsNullOrWhiteSpace(entity.TokenEncrypted),
-            entity.UpdatedAt
-        );
-    }
+            return new IntegrationDto(
+                entity.IntegrationId,
+                entity.ProjectId,
+                entity.Provider,
+                entity.BaseUrl,
+                entity.ProjectKey,
+                entity.Org,
+                !string.IsNullOrWhiteSpace(entity.TokenEncrypted),
+                entity.CreatedByUserId,
+                entity.LinkedAccount,
+                entity.VisibilityStatus,
+                entity.LastVerifiedAt,
+                entity.VerificationNote,
+                entity.CreatedAt,
+                entity.UpdatedAt
+            );
+        }
 
-    private static string NormalizeProvider(string provider)
-    {
-        var p = (provider ?? "").Trim().ToUpperInvariant();
-        if (p is not ("JIRA" or "GITHUB"))
-            throw new ArgumentException("Provider must be JIRA or GITHUB.");
-        return p;
-    }
+        private static string NormalizeProvider(string provider)
+        {
+            var p = (provider ?? string.Empty).Trim().ToUpperInvariant();
+
+            if (p is not ("JIRA" or "GITHUB"))
+                throw new ArgumentException("Provider must be JIRA or GITHUB.");
+
+            return p;
+        }
     }
 }

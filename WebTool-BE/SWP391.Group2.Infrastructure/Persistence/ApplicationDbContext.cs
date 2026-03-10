@@ -226,28 +226,78 @@ namespace SWP391.Group2.Infrastructure.Persistence
 
             modelBuilder.Entity<ProjectIntegration>(e =>
             {
-                e.ToTable("ProjectIntegrations");
+                e.ToTable("ProjectIntegrations", "dbo");
 
                 e.HasKey(x => x.IntegrationId);
 
-                e.Property(x => x.IntegrationId).HasColumnName("integration_id");
-                e.Property(x => x.ProjectId).HasColumnName("project_id");
+                e.Property(x => x.IntegrationId)
+                    .HasColumnName("integration_id");
 
-                e.Property(x => x.Provider).HasColumnName("provider").HasMaxLength(10);
+                e.Property(x => x.ProjectId)
+                    .HasColumnName("project_id")
+                    .IsRequired();
 
-                e.Property(x => x.BaseUrl).HasColumnName("base_url").HasMaxLength(300);
-                e.Property(x => x.ProjectKey).HasColumnName("project_key").HasMaxLength(50);
-                e.Property(x => x.Org).HasColumnName("org").HasMaxLength(200);
+                e.Property(x => x.Provider)
+                    .HasColumnName("provider")
+                    .HasMaxLength(10)
+                    .IsRequired();
 
-                e.Property(x => x.TokenEncrypted).HasColumnName("token_encrypted").HasMaxLength(1000);
+                e.Property(x => x.BaseUrl)
+                    .HasColumnName("base_url")
+                    .HasMaxLength(300);
 
-                e.Property(x => x.CreatedAt).HasColumnName("created_at");
-                e.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+                e.Property(x => x.ProjectKey)
+                    .HasColumnName("project_key")
+                    .HasMaxLength(50);
 
-                e.HasIndex(x => new { x.ProjectId, x.Provider }).IsUnique();
+                e.Property(x => x.Org)
+                    .HasColumnName("org")
+                    .HasMaxLength(200);
 
-                // FK
-                // Nếu bạn đã có entity Project thì add navigation sau, chưa có cũng không sao.
+                e.Property(x => x.TokenEncrypted)
+                    .HasColumnName("token_encrypted")
+                    .HasMaxLength(1000);
+
+                e.Property(x => x.CreatedByUserId)
+                    .HasColumnName("created_by_user_id");
+
+                e.Property(x => x.LinkedAccount)
+                    .HasColumnName("linked_account")
+                    .HasMaxLength(255);
+
+                e.Property(x => x.VisibilityStatus)
+                    .HasColumnName("visibility_status")
+                    .HasMaxLength(20);
+
+                e.Property(x => x.LastVerifiedAt)
+                    .HasColumnName("last_verified_at");
+
+                e.Property(x => x.VerificationNote)
+                    .HasColumnName("verification_note")
+                    .HasMaxLength(500);
+
+                e.Property(x => x.CreatedAt)
+                    .HasColumnName("created_at");
+
+                e.Property(x => x.UpdatedAt)
+                    .HasColumnName("updated_at");
+
+                e.HasIndex(x => x.ProjectId)
+                    .HasDatabaseName("IX_ProjectIntegrations_project_id");
+
+                e.HasIndex(x => new { x.ProjectId, x.Provider })
+                    .IsUnique()
+                    .HasDatabaseName("UQ_ProjectIntegrations");
+
+                e.HasOne(x => x.Project)
+                    .WithMany()
+                    .HasForeignKey(x => x.ProjectId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(x => x.CreatedByUser)
+                    .WithMany()
+                    .HasForeignKey(x => x.CreatedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<SnapshotCommit>(e =>
