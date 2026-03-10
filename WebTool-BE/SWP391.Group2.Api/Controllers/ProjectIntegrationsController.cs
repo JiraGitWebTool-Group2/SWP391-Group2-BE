@@ -27,13 +27,16 @@ namespace SWP391.Group2.Api.Controllers
             {
                 var dto = await _mediator.Send(new GetProjectIntegrationQuery(projectId, provider), ct);
 
-                // map Application DTO -> Api DTO
-                return Ok(new Contracts.Integrations.IntegrationDto(
-                    dto.ProjectId, dto.Provider, dto.BaseUrl, dto.ProjectKey, dto.Org, dto.HasToken, dto.UpdatedAt
-                ));
+                return Ok(ToApiDto(dto));
             }
-            catch (ArgumentException ex) { return BadRequest(ex.Message); }
-            catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
         // PUT /api/projects/{projectId}/integrations
@@ -49,14 +52,20 @@ namespace SWP391.Group2.Api.Controllers
                     req.BaseUrl,
                     req.ProjectKey,
                     req.Org,
-                    req.Token
+                    req.Token,
+                    req.CreatedByUserId,
+                    req.LinkedAccount,
+                    req.VisibilityStatus,
+                    req.LastVerifiedAt,
+                    req.VerificationNote
                 ), ct);
 
-                return Ok(new Contracts.Integrations.IntegrationDto(
-                    dto.ProjectId, dto.Provider, dto.BaseUrl, dto.ProjectKey, dto.Org, dto.HasToken, dto.UpdatedAt
-                ));
+                return Ok(ToApiDto(dto));
             }
-            catch (ArgumentException ex) { return BadRequest(ex.Message); }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         // POST /api/projects/{projectId}/integrations
@@ -73,18 +82,50 @@ namespace SWP391.Group2.Api.Controllers
                     req.BaseUrl,
                     req.ProjectKey,
                     req.Org,
-                    req.Token
+                    req.Token,
+                    req.CreatedByUserId,
+                    req.LinkedAccount,
+                    req.VisibilityStatus,
+                    req.LastVerifiedAt,
+                    req.VerificationNote
                 ), ct);
 
-                var apiDto = new Contracts.Integrations.IntegrationDto(
-                    dto.ProjectId, dto.Provider, dto.BaseUrl, dto.ProjectKey, dto.Org, dto.HasToken, dto.UpdatedAt
-                );
+                var apiDto = ToApiDto(dto);
 
-                // Trả 201 + Location trỏ về endpoint GET
-                return CreatedAtAction(nameof(Get), new { projectId = dto.ProjectId, provider = dto.Provider }, apiDto);
+                return CreatedAtAction(
+                    nameof(Get),
+                    new { projectId = dto.ProjectId, provider = dto.Provider },
+                    apiDto);
             }
-            catch (ArgumentException ex) { return BadRequest(ex.Message); }
-            catch (InvalidOperationException ex) { return Conflict(ex.Message); }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(ex.Message);
+            }
+        }
+
+        private static SWP391.Group2.Api.Contracts.Integrations.IntegrationDto ToApiDto(
+            SWP391.Group2.Application.Features.Integrations.Dtos.IntegrationDto dto)
+        {
+            return new SWP391.Group2.Api.Contracts.Integrations.IntegrationDto(
+                dto.IntegrationId,
+                dto.ProjectId,
+                dto.Provider,
+                dto.BaseUrl,
+                dto.ProjectKey,
+                dto.Org,
+                dto.HasToken,
+                dto.CreatedByUserId,
+                dto.LinkedAccount,
+                dto.VisibilityStatus,
+                dto.LastVerifiedAt,
+                dto.VerificationNote,
+                dto.CreatedAt,
+                dto.UpdatedAt
+            );
         }
     }
 }

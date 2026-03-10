@@ -10,6 +10,11 @@ namespace SWP391.Group2.Application.Features.Integrations.Commands
         string? BaseUrl,
         string? ProjectKey,
         string? Org,
-        string? Token
+        string? Token,
+        int? CreatedByUserId,
+        string? LinkedAccount,
+        string? VisibilityStatus,
+        DateTime? LastVerifiedAt,
+        string? VerificationNote
     ) : IRequest<IntegrationDto>;
 }

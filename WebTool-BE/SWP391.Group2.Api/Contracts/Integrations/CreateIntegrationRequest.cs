@@ -2,10 +2,15 @@
 {
     // Dùng cho POST (create mới). Nếu đã tồn tại thì API sẽ trả 409.
     public record CreateIntegrationRequest(
-        string Provider,        // "JIRA" | "GITHUB"
+        string Provider,         // "JIRA" | "GITHUB"
         string? BaseUrl,
         string? ProjectKey,      // Jira key
         string? Org,             // GitHub org
-        string? Token            // token plain (demo)
+        string? Token,           // token plain (demo)
+        int? CreatedByUserId,
+        string? LinkedAccount,
+        string? VisibilityStatus,
+        DateTime? LastVerifiedAt,
+        string? VerificationNote
     );
 }
