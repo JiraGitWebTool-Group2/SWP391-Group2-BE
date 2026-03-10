@@ -26,14 +26,22 @@ namespace SWP391.Group2.Api.Controllers
             return Ok(result);
         }
 
-        public record CreateGroupRequest(string GroupName, string? Description);
+        public record CreateGroupRequest(
+            string GroupName,
+            string? Description,
+            int ClassId
+        );
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateGroupRequest req, CancellationToken ct)
         {
             try
             {
-                var result = await _mediator.Send(new CreateGroupCommand(req.GroupName, req.Description), ct);
+                var result = await _mediator.Send(
+                    new CreateGroupCommand(req.GroupName, req.Description, req.ClassId),
+                    ct
+                );
+
                 return Ok(result);
             }
             catch (ArgumentException ex)

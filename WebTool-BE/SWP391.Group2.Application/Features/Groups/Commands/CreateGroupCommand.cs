@@ -8,5 +8,5 @@ using System.Threading.Tasks;
 
 namespace SWP391.Group2.Application.Features.Groups.Commands
 {
-    public record CreateGroupCommand(string GroupName, string? Description) : IRequest<GroupDto>;
+    public record CreateGroupCommand(string GroupName, string? Description, int ClassId) : IRequest<GroupDto>;
 }

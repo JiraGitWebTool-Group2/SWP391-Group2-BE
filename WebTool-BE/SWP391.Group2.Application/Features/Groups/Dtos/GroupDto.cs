@@ -10,6 +10,7 @@ namespace SWP391.Group2.Application.Features.Groups.Dtos
         int GroupId,
         string GroupName,
         string? Description,
+        int? ClassId,
         DateTime CreatedAt
     );
 }
