@@ -34,6 +34,10 @@ namespace SWP391.Group2.Infrastructure.Persistence
         public DbSet<Semester> Semesters => Set<Semester>();
         public DbSet<Class> Classes => Set<Class>();
         public DbSet<ClassStudent> ClassStudents => Set<ClassStudent>();
+
+        public DbSet<Role> Roles => Set<Role>();
+        public DbSet<UserGroup> UserGroups => Set<UserGroup>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -84,6 +88,58 @@ namespace SWP391.Group2.Infrastructure.Persistence
                 entity.Property(x => x.CreatedAt).HasColumnName("created_at");
             });
 
+            modelBuilder.Entity<Role>(entity =>
+            {
+                entity.ToTable("Roles");
+
+                entity.HasKey(x => x.RoleId);
+
+                entity.Property(x => x.RoleId)
+                    .HasColumnName("role_id");
+
+                entity.Property(x => x.RoleName)
+                    .HasColumnName("role_name")
+                    .HasMaxLength(50)
+                    .IsRequired();
+            });
+
+            modelBuilder.Entity<UserGroup>(entity =>
+            {
+                entity.ToTable("UserGroups");
+
+                entity.HasKey(x => x.UserGroupId);
+
+                entity.Property(x => x.UserGroupId)
+                    .HasColumnName("user_group_id");
+
+                entity.Property(x => x.UserId)
+                    .HasColumnName("user_id");
+
+                entity.Property(x => x.GroupId)
+                    .HasColumnName("group_id");
+
+                entity.Property(x => x.RoleId)
+                    .HasColumnName("role_id");
+
+                entity.Property(x => x.IsActive)
+                    .HasColumnName("is_active");
+
+                entity.Property(x => x.CreatedAt)
+                    .HasColumnName("created_at");
+
+                entity.HasOne(x => x.User)
+                    .WithMany(u => u.UserGroups)
+                    .HasForeignKey(x => x.UserId);
+
+                entity.HasOne(x => x.Group)
+                    .WithMany(g => g.UserGroups)
+                    .HasForeignKey(x => x.GroupId);
+
+                entity.HasOne(x => x.Role)
+                    .WithMany(r => r.UserGroups)
+                    .HasForeignKey(x => x.RoleId);
+            });
+
             modelBuilder.Entity<Project>(entity =>
             {
                 entity.ToTable("Projects", "dbo");
@@ -107,19 +163,49 @@ namespace SWP391.Group2.Infrastructure.Persistence
                 entity.Property(x => x.SyncRunId).HasColumnName("sync_run_id");
                 entity.Property(x => x.ProjectId).HasColumnName("project_id");
                 entity.Property(x => x.TriggeredByUserId).HasColumnName("triggered_by_user_id");
-                entity.Property(x => x.TriggerType).HasColumnName("trigger_type").HasMaxLength(10).IsRequired();
-                entity.Property(x => x.ScopeType).HasColumnName("scope_type").HasMaxLength(10).IsRequired();
+
+                entity.Property(x => x.TriggeredByRole)
+                    .HasColumnName("triggered_by_role")
+                    .HasMaxLength(20);
+
+                entity.Property(x => x.TriggerType)
+                    .HasColumnName("trigger_type")
+                    .HasMaxLength(10)
+                    .IsRequired();
+
+                entity.Property(x => x.ScopeType)
+                    .HasColumnName("scope_type")
+                    .HasMaxLength(10)
+                    .IsRequired();
+
                 entity.Property(x => x.SprintId).HasColumnName("sprint_id");
                 entity.Property(x => x.IncludeJira).HasColumnName("include_jira");
                 entity.Property(x => x.IncludeGithub).HasColumnName("include_github");
-                entity.Property(x => x.RunStatus).HasColumnName("run_status").HasMaxLength(10).IsRequired();
+
+                entity.Property(x => x.RunStatus)
+                    .HasColumnName("run_status")
+                    .HasMaxLength(10)
+                    .IsRequired();
+
                 entity.Property(x => x.StartedAt).HasColumnName("started_at");
                 entity.Property(x => x.FinishedAt).HasColumnName("finished_at");
                 entity.Property(x => x.Notes).HasColumnName("notes").HasMaxLength(1000);
 
+                entity.HasIndex(x => x.ProjectId)
+                    .HasDatabaseName("IX_SyncRuns_project_id");
+
+                entity.HasIndex(x => x.SprintId)
+                    .HasDatabaseName("IX_SyncRuns_sprint_id");
+
                 entity.HasOne(x => x.Project)
                     .WithMany(p => p.SyncRuns)
-                    .HasForeignKey(x => x.ProjectId);
+                    .HasForeignKey(x => x.ProjectId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.TriggeredByUser)
+                    .WithMany()
+                    .HasForeignKey(x => x.TriggeredByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<Snapshot>(entity =>

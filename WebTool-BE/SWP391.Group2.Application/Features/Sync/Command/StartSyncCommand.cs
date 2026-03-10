@@ -13,7 +13,8 @@ namespace SWP391.Group2.Application.Features.Sync.Command
         bool IncludeGithub,
         string ScopeType,
         int? SprintId,
-        int? TriggeredByUserId, // lấy từ JWT, AUTO thì null
-        string TriggerType      // "MANUAL" | "AUTO"
-    ) : IRequest<int>;          // return SyncRunId
+        int? TriggeredByUserId,   // lấy từ JWT, AUTO thì null
+        string? TriggeredByRole,  // ADMIN | LECTURER | STUDENT | null
+        string TriggerType        // MANUAL | AUTO
+    ) : IRequest<int>;            // return SyncRunId
 }

@@ -24,9 +24,12 @@ namespace SWP391.Group2.Application.Features.Sync.Command
         public async Task Handle(RunSyncJobCommand request, CancellationToken ct)
         {
             var run = await _db.SyncRuns.FirstOrDefaultAsync(x => x.SyncRunId == request.SyncRunId, ct);
-            if (run is null) return;
 
-            if (run.RunStatus != "RUNNING") return;
+            if (run is null)
+                return;
+
+            if (!string.Equals(run.RunStatus, "RUNNING", StringComparison.OrdinalIgnoreCase))
+                return;
 
             bool jiraSelected = run.IncludeJira;
             bool githubSelected = run.IncludeGithub;
