@@ -46,6 +46,14 @@ public class AssignStudentToClassHandler : IRequestHandler<AssignStudentToClassC
                 await _context.SaveChangesAsync(cancellationToken);
             }
 
+            // lấy group của student
+            var group = await (
+                from ug in _context.UserGroups
+                join g in _context.Groups on ug.GroupId equals g.GroupId
+                where ug.UserId == student.UserId && g.ClassId == request.ClassId
+                select new { g.GroupId, g.GroupName }
+            ).FirstOrDefaultAsync(cancellationToken);
+
             return new ClassStudentDto
             {
                 ClassId = existing.ClassId,
@@ -54,7 +62,9 @@ public class AssignStudentToClassHandler : IRequestHandler<AssignStudentToClassC
                 StudentName = student.FullName,
                 StudentRole = student.System_Role,
                 JoinedAt = existing.JoinedAt,
-                IsActive = existing.IsActive
+                IsActive = existing.IsActive,
+                GroupId = group?.GroupId,
+                GroupName = group?.GroupName
             };
         }
 
@@ -69,6 +79,14 @@ public class AssignStudentToClassHandler : IRequestHandler<AssignStudentToClassC
         _context.ClassStudents.Add(entity);
         await _context.SaveChangesAsync(cancellationToken);
 
+        // lấy group nếu student đã có
+        var studentGroup = await (
+            from ug in _context.UserGroups
+            join g in _context.Groups on ug.GroupId equals g.GroupId
+            where ug.UserId == student.UserId && g.ClassId == request.ClassId
+            select new { g.GroupId, g.GroupName }
+        ).FirstOrDefaultAsync(cancellationToken);
+
         return new ClassStudentDto
         {
             ClassId = entity.ClassId,
@@ -77,7 +95,9 @@ public class AssignStudentToClassHandler : IRequestHandler<AssignStudentToClassC
             StudentName = student.FullName,
             StudentRole = student.System_Role,
             JoinedAt = entity.JoinedAt,
-            IsActive = entity.IsActive
+            IsActive = entity.IsActive,
+            GroupId = studentGroup?.GroupId,
+            GroupName = studentGroup?.GroupName
         };
     }
 }

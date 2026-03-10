@@ -24,6 +24,8 @@ namespace SWP391.Group2.Domain.Entities
         public Class? Class { get; set; }  
 
         public ICollection<UserGroup> UserGroups { get; set; } = new List<UserGroup>();
+
+        public ICollection<Project> Projects { get; set; } = new List<Project>();
     }
 
 }
