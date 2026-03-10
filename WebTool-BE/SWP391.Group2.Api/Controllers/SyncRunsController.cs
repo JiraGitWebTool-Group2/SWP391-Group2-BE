@@ -23,7 +23,6 @@ namespace SWP391.Group2.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Start([FromBody] StartSyncRequest req, CancellationToken ct)
         {
-            // tạm: lấy userId từ JWT (để triggered_by_user_id)
             var idStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             int? userId = int.TryParse(idStr, out var uid) ? uid : null;
 
@@ -36,10 +35,15 @@ namespace SWP391.Group2.Api.Controllers
                     req.ScopeType,
                     req.SprintId,
                     userId,
+                    null,       // role sẽ resolve ở handler từ DB
                     "MANUAL"
                 ), ct);
 
-                return Ok(new StartSyncResponse(syncRunId, "RUNNING"));
+                return Ok(new StartSyncResponse(
+                    syncRunId,
+                    req.ProjectId,
+                    "RUNNING"
+                ));
             }
             catch (ArgumentException ex)
             {
@@ -50,15 +54,12 @@ namespace SWP391.Group2.Api.Controllers
         [HttpGet("{syncRunId:int}")]
         public async Task<IActionResult> GetStatus(int syncRunId, CancellationToken ct)
         {
-            try
-            {
-                var res = await _mediator.Send(new GetSyncRunStatusQuery(syncRunId), ct);
-                return Ok(res);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
+            var res = await _mediator.Send(new GetSyncRunStatusQuery(syncRunId), ct);
+
+            if (res is null)
+                return NotFound("Sync run not found.");
+
+            return Ok(res);
         }
     }
 }

@@ -12,5 +12,7 @@ namespace SWP391.Group2.Domain.Entities
         public string GroupName { get; set; } = default!;
         public string? Description { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        public ICollection<UserGroup> UserGroups { get; set; } = new List<UserGroup>();
     }
 }

@@ -27,6 +27,8 @@ namespace SWP391.Group2.Application.Abstractions
         DbSet<Semester> Semesters { get; }
         DbSet<Class> Classes { get; }
         DbSet<ClassStudent> ClassStudents { get; }
+        DbSet<UserGroup> UserGroups { get; }
+        DbSet<Role> Roles { get; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }

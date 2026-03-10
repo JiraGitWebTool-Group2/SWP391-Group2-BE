@@ -25,9 +25,9 @@ namespace SWP391.Group2.Application.Features.Sync.Queries
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.SyncRunId == request.SyncRunId, ct);
 
-            if (run is null) return null;
+            if (run is null)
+                return null;
 
-            // Lấy snapshot mới nhất theo SyncRunId (nếu có)
             var snapshotId = await _db.Snapshots
                 .AsNoTracking()
                 .Where(s => s.SyncRunId == run.SyncRunId)
@@ -37,10 +37,13 @@ namespace SWP391.Group2.Application.Features.Sync.Queries
 
             return new SyncRunStatusDto(
                 run.SyncRunId,
+                run.ProjectId,
                 run.RunStatus,
                 run.Notes,
                 run.StartedAt,
                 run.FinishedAt,
+                run.TriggeredByUserId,
+                run.TriggeredByRole,
                 snapshotId
             );
         }

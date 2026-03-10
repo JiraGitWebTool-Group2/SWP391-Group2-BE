@@ -21,5 +21,7 @@ namespace SWP391.Group2.Domain.Entities
         public string? ProviderUserId { get; set; } // Google "sub"
         // Navigation
         public ICollection<GitHubCommit> GitHubCommits { get; set; } = new List<GitHubCommit>();
+
+        public ICollection<UserGroup> UserGroups { get; set; } = new List<UserGroup>();
     }
 }
