@@ -18,14 +18,14 @@ public class GetLecturersHandler : IRequestHandler<GetLecturersQuery, List<Lectu
     {
         return await _context.Users
             .AsNoTracking()
-            .Where(x => x.System_Role == "LECTURER")
+            .Where(x => x.SystemRole == "LECTURER")
             .OrderBy(x => x.FullName)
             .Select(x => new LecturerDto
             {
                 LecturerId = x.UserId,
                 Email = x.Email,
                 FullName = x.FullName,
-                SystemRole = x.System_Role,
+                SystemRole = x.SystemRole,
                 IsActive = x.IsActive,
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt

@@ -64,7 +64,7 @@ namespace SWP391.Group2.Application.Features.Users.Command
                 FullName = fullName,
                 Provider = provider,
                 ProviderUserId = providerUserId,
-                System_Role = role, // THÊM DÒNG NÀY
+                SystemRole = role, // THÊM DÒNG NÀY
                 IsActive = true,
                 CreatedAt = now,
                 UpdatedAt = now
@@ -94,7 +94,7 @@ namespace SWP391.Group2.Application.Features.Users.Command
                 FullName = user.FullName,
                 Provider = user.Provider,
                 ProviderUserId = user.ProviderUserId,
-                System_Role = user.System_Role, // THÊM
+                System_Role = user.SystemRole, // THÊM
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt

@@ -19,6 +19,7 @@ namespace SWP391.Group2.Domain.Entities
         public bool IsActive { get; set; }
 
         public DateTime CreatedAt { get; set; }
+        public DateTime JoinedAt { get; set; }
 
         public User User { get; set; } = default!;
 

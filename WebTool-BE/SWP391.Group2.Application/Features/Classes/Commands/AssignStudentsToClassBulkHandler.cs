@@ -41,7 +41,7 @@ public class AssignStudentsToClassBulkHandler : IRequestHandler<AssignStudentsTo
             throw new ArgumentException($"Students not found: {string.Join(", ", missingIds)}");
 
         var invalidRoleIds = students
-            .Where(x => !string.Equals(x.System_Role, "STUDENT", StringComparison.OrdinalIgnoreCase))
+            .Where(x => !string.Equals(x.SystemRole, "STUDENT", StringComparison.OrdinalIgnoreCase))
             .Select(x => x.UserId)
             .ToList();
 
@@ -91,7 +91,7 @@ public class AssignStudentsToClassBulkHandler : IRequestHandler<AssignStudentsTo
                     StudentId = u.UserId,
                     StudentEmail = u.Email,
                     StudentName = u.FullName,
-                    StudentRole = u.System_Role,
+                    StudentRole = u.SystemRole,
                     JoinedAt = cs.JoinedAt,
                     IsActive = cs.IsActive
                 })

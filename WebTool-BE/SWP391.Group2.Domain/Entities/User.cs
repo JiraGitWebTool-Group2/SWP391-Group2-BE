@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,7 +17,9 @@ namespace SWP391.Group2.Domain.Entities
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        public string System_Role { get; set; } = "STUDENT";
+        [Column("system_role")]
+
+        public string SystemRole { get; set; } = "STUDENT";
 
         public string? ProviderUserId { get; set; } // Google "sub"
         // Navigation

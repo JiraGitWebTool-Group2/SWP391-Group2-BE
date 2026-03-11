@@ -53,5 +53,21 @@ namespace SWP391.Group2.Api.Controllers
                 return Conflict(ex.Message);
             }
         }
+
+        [HttpGet("integrated")]
+        public async Task<IActionResult> GetIntegratedGroups(CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetIntegratedGroupsQuery(), cancellationToken);
+            return Ok(result);
+        }
+
+        [HttpGet("{groupId:int}/students")]
+        public async Task<IActionResult> GetGroupStudents(int groupId, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetGroupStudentsQuery(groupId), cancellationToken);
+            return Ok(result);
+        }
+
+       
     }
 }

@@ -50,7 +50,7 @@ namespace SWP391.Group2.Application.Features.Auth.Command
                     Email = emailLower,
                     FullName = googleUser.FullName,
                     Provider = "GOOGLE",
-                    System_Role = role,
+                    SystemRole = role,
                     IsActive = true
                 };
 
@@ -58,7 +58,7 @@ namespace SWP391.Group2.Application.Features.Auth.Command
                 await _db.SaveChangesAsync(ct);
             }
 
-            if (user.System_Role != role)
+            if (user.SystemRole != role)
                 throw new UnauthorizedAccessException("Role mismatch.");
 
             // Update provider if missing
