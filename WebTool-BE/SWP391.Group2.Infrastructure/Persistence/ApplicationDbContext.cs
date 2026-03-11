@@ -161,10 +161,6 @@ namespace SWP391.Group2.Infrastructure.Persistence
                 entity.Property(x => x.ProjectId).HasColumnName("project_id");
                 entity.Property(x => x.TriggeredByUserId).HasColumnName("triggered_by_user_id");
 
-                entity.Property(x => x.TriggeredByRole)
-                    .HasColumnName("triggered_by_role")
-                    .HasMaxLength(20);
-
                 entity.Property(x => x.TriggerType)
                     .HasColumnName("trigger_type")
                     .HasMaxLength(10)
