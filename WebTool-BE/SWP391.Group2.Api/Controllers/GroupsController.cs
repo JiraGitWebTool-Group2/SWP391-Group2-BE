@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SWP391.Group2.Api.Contracts.Groups;
 using SWP391.Group2.Application.Features.Groups.Commands;
 using SWP391.Group2.Application.Features.Groups.Queries;
 using SWP391.Group2.Domain.Entities;
@@ -68,6 +69,29 @@ namespace SWP391.Group2.Api.Controllers
             return Ok(result);
         }
 
+        [HttpPost("{groupId:int}/students")]
+        public async Task<IActionResult> AddStudentToGroup(int groupId, [FromBody] AddStudentToGroupRequest req, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var result = await _mediator.Send(new AddStudentToGroupCommand(groupId, req.UserId, req.RoleId), cancellationToken);
+
+                if (result == null)
+                {
+                    return NotFound($"Group with ID {groupId} not found.");
+                }
+
+                return CreatedAtAction("GetGroupStudents", new { groupId = groupId }, result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(ex.Message);
+            }
+        }
        
     }
 }

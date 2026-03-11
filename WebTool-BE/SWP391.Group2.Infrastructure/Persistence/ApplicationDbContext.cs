@@ -103,33 +103,38 @@ namespace SWP391.Group2.Infrastructure.Persistence
                     .IsRequired();
             });
 
+            // UserGroup entity configuration
             modelBuilder.Entity<UserGroup>(entity =>
             {
                 entity.ToTable("UserGroups");
 
+                // Composite key using UserId and GroupId
                 entity.HasKey(x => new { x.UserId, x.GroupId });
 
+                // Map properties to database columns
                 entity.Property(x => x.UserId).HasColumnName("user_id");
                 entity.Property(x => x.GroupId).HasColumnName("group_id");
                 entity.Property(x => x.RoleId).HasColumnName("role_id");
                 entity.Property(x => x.IsActive).HasColumnName("is_active");
                 entity.Property(x => x.JoinedAt).HasColumnName("joined_at");
+                //entity.Property(x => x.CreatedAt).HasColumnName("created_at");
 
-                entity.HasOne(x => x.User)
-                    .WithMany()
-                    .HasForeignKey(x => x.UserId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                // Foreign key relationships
+                //entity.HasOne(x => x.User)
+                //    .WithMany()
+                //    .HasForeignKey(x => x.UserId)
+                //    .OnDelete(DeleteBehavior.Restrict);
 
-                entity.HasOne(x => x.Group)
-                    .WithMany()
-                    .HasForeignKey(x => x.GroupId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                //entity.HasOne(x => x.Group)
+                //    .WithMany()
+                //    .HasForeignKey(x => x.GroupId)
+                //    .OnDelete(DeleteBehavior.Restrict);
 
-                entity.HasOne(x => x.Role)
-                    .WithMany()
-                    .HasForeignKey(x => x.RoleId)
-                    .OnDelete(DeleteBehavior.Restrict);
-            });
+                //entity.HasOne(x => x.Role)
+                //    .WithMany()
+                //    .HasForeignKey(x => x.RoleId)
+                //    .OnDelete(DeleteBehavior.Restrict);
+            }); 
 
 
             modelBuilder.Entity<Project>(entity =>

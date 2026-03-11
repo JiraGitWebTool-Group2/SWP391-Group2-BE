@@ -8,23 +8,38 @@ namespace SWP391.Group2.Domain.Entities
 {
     public class UserGroup
     {
-        public int UserGroupId { get; set; }
+        //public int UserGroupId { get; set; }
 
-        public int UserId { get; set; }
+        //public int UserId { get; set; }
 
-        public int GroupId { get; set; }
+        //public int GroupId { get; set; }
 
-        public int RoleId { get; set; }
+        //public int RoleId { get; set; }
+
+        //public bool IsActive { get; set; }
+
+        //public DateTime CreatedAt { get; set; }
+
+        //public DateTime JoinedAt { get; set; }
+
+        //public User User { get; set; } = default!;
+
+        //public Group Group { get; set; } = default!;
+
+        //public Role Role { get; set; } = default!;
+
+        public int UserId { get; set; }  // Foreign Key to Users
+        public int GroupId { get; set; } // Foreign Key to Groups
+        public int RoleId { get; set; }  // Foreign Key to Roles
 
         public bool IsActive { get; set; }
-
-        public DateTime CreatedAt { get; set; }
         public DateTime JoinedAt { get; set; }
 
-        public User User { get; set; } = default!;
+        //public DateTime CreatedAt { get; set; }
 
-        public Group Group { get; set; } = default!;
-
-        public Role Role { get; set; } = default!;
+        // Navigation properties
+        //public User? User { get; set; } = default!;
+        //public Group? Group { get; set; } = default!;
+        //public Role? Role { get; set; } = default!;
     }
 }

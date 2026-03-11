@@ -17,6 +17,7 @@ namespace SWP391.Group2.Domain.Entities
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+
         [Column("system_role")]
 
         public string SystemRole { get; set; } = "STUDENT";
