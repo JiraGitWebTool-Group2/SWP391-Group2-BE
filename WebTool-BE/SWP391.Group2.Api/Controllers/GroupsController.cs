@@ -27,11 +27,6 @@ namespace SWP391.Group2.Api.Controllers
             return Ok(result);
         }
 
-        public record CreateGroupRequest(
-            string GroupName,
-            string? Description,
-            int ClassId
-        );
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateGroupRequest req, CancellationToken ct)

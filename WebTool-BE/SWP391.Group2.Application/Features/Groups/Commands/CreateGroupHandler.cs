@@ -3,11 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using SWP391.Group2.Application.Abstractions;
 using SWP391.Group2.Application.Features.Groups.Dtos;
 using SWP391.Group2.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SWP391.Group2.Application.Features.Groups.Commands
 {
@@ -27,20 +22,21 @@ namespace SWP391.Group2.Application.Features.Groups.Commands
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("GroupName is required.");
 
-            // check class tồn tại
-            var classExists = await _db.Classes
-                .AnyAsync(c => c.ClassId == request.ClassId, cancellationToken);
+            // Lấy class + lecturer của class
+            var classEntity = await _db.Classes
+                .FirstOrDefaultAsync(c => c.ClassId == request.ClassId, cancellationToken);
 
-            if (!classExists)
+            if (classEntity == null)
                 throw new InvalidOperationException("Class not found.");
 
-            // check duplicate group name
+            // Check duplicate group name
             var exists = await _db.Groups
                 .AnyAsync(g => g.GroupName == name, cancellationToken);
 
             if (exists)
                 throw new InvalidOperationException("Group name already exists.");
 
+            // Tạo group
             var entity = new Group
             {
                 GroupName = name,
@@ -51,6 +47,54 @@ namespace SWP391.Group2.Application.Features.Groups.Commands
 
             _db.Groups.Add(entity);
             await _db.SaveChangesAsync(cancellationToken);
+
+            // Nếu class đã có lecturer thì tự add lecturer vào group
+            if (classEntity.LecturerUserId.HasValue)
+            {
+                var lecturerId = classEntity.LecturerUserId.Value;
+
+                var lecturer = await _db.Users
+                    .FirstOrDefaultAsync(
+                        u => u.UserId == lecturerId &&
+                             u.SystemRole == "LECTURER" &&
+                             u.IsActive,
+                        cancellationToken);
+
+                if (lecturer != null)
+                {
+                    // Ưu tiên role MENTOR trong group
+                    var mentorRole = await _db.Roles
+                        .FirstOrDefaultAsync(
+                            r => r.RoleName == "MENTOR",
+                            cancellationToken);
+
+                    if (mentorRole == null)
+                    {
+                        throw new InvalidOperationException(
+                            "Role 'MENTOR' was not found. Please seed Roles table first.");
+                    }
+
+                    var existedUserGroup = await _db.UserGroups
+                        .AnyAsync(
+                            ug => ug.UserId == lecturerId && ug.GroupId == entity.GroupId,
+                            cancellationToken);
+
+                    if (!existedUserGroup)
+                    {
+                        var lecturerInGroup = new UserGroup
+                        {
+                            UserId = lecturerId,
+                            GroupId = entity.GroupId,
+                            RoleId = mentorRole.RoleId,
+                            IsActive = true,
+                            JoinedAt = DateTime.UtcNow
+                        };
+
+                        _db.UserGroups.Add(lecturerInGroup);
+                        await _db.SaveChangesAsync(cancellationToken);
+                    }
+                }
+            }
 
             return new GroupDto(
                 entity.GroupId,
