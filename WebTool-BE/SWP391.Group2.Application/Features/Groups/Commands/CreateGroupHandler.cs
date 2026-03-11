@@ -60,19 +60,9 @@ namespace SWP391.Group2.Application.Features.Groups.Commands
                              u.IsActive,
                         cancellationToken);
 
-                if (lecturer != null)
                 {
-                    // Ưu tiên role MENTOR trong group
-                    var mentorRole = await _db.Roles
-                        .FirstOrDefaultAsync(
-                            r => r.RoleName == "MENTOR",
-                            cancellationToken);
-
-                    if (mentorRole == null)
-                    {
-                        throw new InvalidOperationException(
-                            "Role 'MENTOR' was not found. Please seed Roles table first.");
-                    }
+                    // Set role_id = 2 (assuming role_id for 'LECTURER' is 2)
+                    var lecturerRoleId = 2;
 
                     var existedUserGroup = await _db.UserGroups
                         .AnyAsync(
@@ -85,7 +75,7 @@ namespace SWP391.Group2.Application.Features.Groups.Commands
                         {
                             UserId = lecturerId,
                             GroupId = entity.GroupId,
-                            RoleId = mentorRole.RoleId,
+                            RoleId = lecturerRoleId,  // Set role_id to 2 for 'LECTURER'
                             IsActive = true,
                             JoinedAt = DateTime.UtcNow
                         };
