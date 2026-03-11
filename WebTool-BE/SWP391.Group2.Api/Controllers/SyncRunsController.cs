@@ -35,7 +35,6 @@ namespace SWP391.Group2.Api.Controllers
                     req.ScopeType,
                     req.SprintId,
                     userId,
-                    null,       // role sẽ resolve ở handler từ DB
                     "MANUAL"
                 ), ct);
 
