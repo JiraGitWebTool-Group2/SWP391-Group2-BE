@@ -29,7 +29,7 @@ public class GetClassLecturerHandler : IRequestHandler<GetClassLecturerQuery, Cl
                     LecturerId = u.UserId,
                     LecturerEmail = u.Email,
                     LecturerName = u.FullName,
-                    LecturerRole = u.System_Role
+                    LecturerRole = u.SystemRole
                 })
             .FirstOrDefaultAsync(cancellationToken);
     }

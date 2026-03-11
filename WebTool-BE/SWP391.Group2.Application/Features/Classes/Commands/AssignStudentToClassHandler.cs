@@ -29,7 +29,7 @@ public class AssignStudentToClassHandler : IRequestHandler<AssignStudentToClassC
         if (student == null)
             throw new ArgumentException($"Student with id {request.StudentId} was not found.");
 
-        if (!string.Equals(student.System_Role, "STUDENT", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(student.SystemRole, "STUDENT", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"User with id {request.StudentId} is not a student.");
 
         var existing = await _context.ClassStudents
@@ -60,7 +60,7 @@ public class AssignStudentToClassHandler : IRequestHandler<AssignStudentToClassC
                 StudentId = student.UserId,
                 StudentEmail = student.Email,
                 StudentName = student.FullName,
-                StudentRole = student.System_Role,
+                StudentRole = student.SystemRole,
                 JoinedAt = existing.JoinedAt,
                 IsActive = existing.IsActive,
                 GroupId = group?.GroupId,
@@ -93,7 +93,7 @@ public class AssignStudentToClassHandler : IRequestHandler<AssignStudentToClassC
             StudentId = student.UserId,
             StudentEmail = student.Email,
             StudentName = student.FullName,
-            StudentRole = student.System_Role,
+            StudentRole = student.SystemRole,
             JoinedAt = entity.JoinedAt,
             IsActive = entity.IsActive,
             GroupId = studentGroup?.GroupId,

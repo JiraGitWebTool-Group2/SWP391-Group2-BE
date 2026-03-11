@@ -147,7 +147,7 @@ namespace SWP391.Group2.Application.Features.Users.Command
                 {
                     Email = username,       // map Username -> Email
                     FullName = fullName,
-                    System_Role = system_role,
+                    SystemRole = system_role,
                     Provider = "LOCAL",
                     ProviderUserId = null,
                     IsActive = true,
