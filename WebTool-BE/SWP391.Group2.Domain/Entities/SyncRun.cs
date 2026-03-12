@@ -22,6 +22,13 @@ namespace SWP391.Group2.Domain.Entities
         public bool IncludeJira { get; set; }
         public bool IncludeGithub { get; set; }
 
+        // GitHub sync options
+        public DateTime? GithubFrom { get; set; }
+        public DateTime? GithubTo { get; set; }
+        public bool SyncGithubCommits { get; set; } = true;
+        public bool SyncGithubPullRequests { get; set; } = false;
+        public string? GithubSyncMode { get; set; } // FULL / INCREMENTAL / CUSTOM_RANGE / SINGLE_DAY
+
         // RUNNING / SUCCESS / FAILED / PARTIAL
         public string RunStatus { get; set; } = "RUNNING";
 

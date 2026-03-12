@@ -3,11 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using SWP391.Group2.Application.Abstractions;
 using SWP391.Group2.Application.Abstractions.Jobs;
 using SWP391.Group2.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SWP391.Group2.Application.Features.Sync.Command
 {
@@ -59,16 +54,72 @@ namespace SWP391.Group2.Application.Features.Sync.Command
                     throw new ArgumentException("User does not belong to this project's group or has no project role.");
             }
 
+            // ===== GitHub options normalize / validate =====
+            DateTime? githubFrom = null;
+            DateTime? githubTo = null;
+            bool syncGithubCommits = request.SyncGithubCommits;
+            bool syncGithubPullRequests = request.SyncGithubPullRequests;
+            string? githubSyncMode = string.IsNullOrWhiteSpace(request.GithubSyncMode)
+                ? null
+                : request.GithubSyncMode.Trim().ToUpperInvariant();
+
+            if (request.IncludeGithub)
+            {
+                if (!syncGithubCommits && !syncGithubPullRequests)
+                    throw new ArgumentException("At least one GitHub item must be selected.");
+
+                if (request.GithubFrom.HasValue ^ request.GithubTo.HasValue)
+                    throw new ArgumentException("GithubFrom and GithubTo must be provided together.");
+
+                if (request.GithubFrom.HasValue && request.GithubTo.HasValue)
+                {
+                    githubFrom = DateTime.SpecifyKind(request.GithubFrom.Value, DateTimeKind.Utc);
+                    githubTo = DateTime.SpecifyKind(request.GithubTo.Value, DateTimeKind.Utc);
+
+                    if (githubFrom > githubTo)
+                        throw new ArgumentException("GithubFrom must be less than or equal to GithubTo.");
+
+                    githubSyncMode ??= githubFrom.Value.Date == githubTo.Value.Date
+                        ? "SINGLE_DAY"
+                        : "CUSTOM_RANGE";
+                }
+                else
+                {
+                    githubTo = DateTime.UtcNow;
+                    githubFrom = githubTo.Value.AddDays(-7);
+
+                    githubSyncMode ??= "INCREMENTAL";
+                }
+
+                if (githubSyncMode is not ("FULL" or "INCREMENTAL" or "CUSTOM_RANGE" or "SINGLE_DAY"))
+                    throw new ArgumentException("GithubSyncMode is invalid.");
+            }
+            else
+            {
+                // Không sync GitHub thì dọn sạch metadata GitHub
+                syncGithubCommits = false;
+                syncGithubPullRequests = false;
+                githubSyncMode = null;
+                githubFrom = null;
+                githubTo = null;
+            }
+
             var run = new SyncRun
             {
                 ProjectId = request.ProjectId,
                 TriggeredByUserId = request.TriggeredByUserId,
-                //TriggeredByRole = triggeredByRole,
                 TriggerType = triggerType,
                 ScopeType = scope,
                 SprintId = request.SprintId,
                 IncludeJira = request.IncludeJira,
                 IncludeGithub = request.IncludeGithub,
+
+                GithubFrom = githubFrom,
+                GithubTo = githubTo,
+                SyncGithubCommits = syncGithubCommits,
+                SyncGithubPullRequests = syncGithubPullRequests,
+                GithubSyncMode = githubSyncMode,
+
                 RunStatus = "RUNNING",
                 StartedAt = DateTime.UtcNow
             };

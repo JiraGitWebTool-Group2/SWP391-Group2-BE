@@ -14,6 +14,12 @@ namespace SWP391.Group2.Application.Features.Sync.Command
         string ScopeType,
         int? SprintId,
         int? TriggeredByUserId,   // lấy từ JWT, AUTO thì null
-        string TriggerType        // MANUAL | AUTO
+        string TriggerType,       // MANUAL | AUTO
+
+        DateTime? GithubFrom,
+        DateTime? GithubTo,
+        bool SyncGithubCommits,
+        bool SyncGithubPullRequests,
+        string? GithubSyncMode
     ) : IRequest<int>;            // return SyncRunId
 }

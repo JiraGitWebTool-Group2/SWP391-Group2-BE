@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using Azure.Core;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SWP391.Group2.Api.Contracts.Sync;
@@ -35,7 +36,12 @@ namespace SWP391.Group2.Api.Controllers
                     req.ScopeType,
                     req.SprintId,
                     userId,
-                    "MANUAL"
+                    "MANUAL",
+                    req.GithubFrom,
+                    req.GithubTo,
+                    req.SyncGithubCommits,
+                    req.SyncGithubPullRequests,
+                    req.GithubSyncMode
                 ), ct);
 
                 return Ok(new StartSyncResponse(
