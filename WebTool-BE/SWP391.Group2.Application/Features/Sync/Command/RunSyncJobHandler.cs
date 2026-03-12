@@ -47,11 +47,6 @@ namespace SWP391.Group2.Application.Features.Sync.Command
                 return new GitHubSyncResult(false, "FAILED - No GitHub item selected.", null);
             }
 
-            if (!run.SyncGithubCommits)
-            {
-                return new GitHubSyncResult(true, "SKIPPED - GitHub commit sync not selected.", null);
-            }
-
             try
             {
                 var repos = await _db.Repositories
@@ -82,14 +77,19 @@ namespace SWP391.Group2.Application.Features.Sync.Command
                         ct);
 
                 int inserted = 0, skipped = 0, repoOk = 0, repoFail = 0;
+                int prInserted = 0, prUpdated = 0, prSkipped = 0;
+
                 var repoErrors = new List<string>();
                 var commitIdsForSnapshot = new HashSet<int>();
+                var pullRequestIdsForSnapshot = new HashSet<int>();
 
                 foreach (var repo in repos)
                 {
                     try
                     {
-                        var commits = await _gitHub.GetCommitsAsync(
+                        if (run.SyncGithubCommits)
+                        {
+                            var commits = await _gitHub.GetCommitsAsync(
                             githubCfg.Org!,
                             repo.RepoName,
                             fromUtc,
@@ -97,67 +97,216 @@ namespace SWP391.Group2.Application.Features.Sync.Command
                             githubCfg.TokenEncrypted!,
                             ct);
 
-                        if (commits.Count == 0)
-                        {
-                            repoOk++;
-                            continue;
+                            //if (commits.Count == 0)
+                            //{
+                            //    repoOk++;
+                            //    continue;
+                            //}
+
+                            //var commitShas = commits
+                            //    .Select(c => c.Sha)
+                            //    .Where(sha => !string.IsNullOrWhiteSpace(sha))
+                            //    .Distinct()
+                            //    .ToList();
+
+                            //var existingCommits = await _db.GitHubCommits
+                            //    .Where(x => x.RepoId == repo.RepoId && commitShas.Contains(x.CommitHash))
+                            //    .ToListAsync(ct);
+
+                            //var existingBySha = existingCommits
+                            //    .GroupBy(x => x.CommitHash)
+                            //    .ToDictionary(g => g.Key, g => g.First());
+
+                            //var newCommitEntities = new List<GitHubCommit>();
+
+                            //foreach (var c in commits)
+                            //{
+                            //    if (existingBySha.TryGetValue(c.Sha, out var existing))
+                            //    {
+                            //        skipped++;
+                            //        commitIdsForSnapshot.Add(existing.CommitId);
+                            //        continue;
+                            //    }
+
+                            //    int? userId = null;
+                            //    if (!string.IsNullOrWhiteSpace(c.AuthorLogin) &&
+                            //        githubAccountMap.TryGetValue(c.AuthorLogin, out var mappedUserId))
+                            //    {
+                            //        userId = mappedUserId;
+                            //    }
+
+                            //    var entity = new GitHubCommit
+                            //    {
+                            //        RepoId = repo.RepoId,
+                            //        UserId = userId,
+                            //        CommitHash = c.Sha,
+                            //        Message = c.Message.Length > 1000 ? c.Message[..1000] : c.Message,
+                            //        CommittedAt = c.CommittedAt,
+                            //        CommitUrl = c.Url
+                            //    };
+
+                            //    newCommitEntities.Add(entity);
+                            //}
+
+                            if (commits.Count > 0)
+                            {
+                                var commitShas = commits
+                                    .Select(c => c.Sha)
+                                    .Where(sha => !string.IsNullOrWhiteSpace(sha))
+                                    .Distinct()
+                                    .ToList();
+
+                                var existingCommits = await _db.GitHubCommits
+                                    .Where(x => x.RepoId == repo.RepoId && commitShas.Contains(x.CommitHash))
+                                    .ToListAsync(ct);
+
+                                var existingBySha = existingCommits
+                                    .GroupBy(x => x.CommitHash)
+                                    .ToDictionary(g => g.Key, g => g.First());
+
+                                var newCommitEntities = new List<GitHubCommit>();
+
+                                foreach (var c in commits)
+                                {
+                                    if (existingBySha.TryGetValue(c.Sha, out var existing))
+                                    {
+                                        skipped++;
+                                        commitIdsForSnapshot.Add(existing.CommitId);
+                                        continue;
+                                    }
+
+                                    int? userId = null;
+                                    if (!string.IsNullOrWhiteSpace(c.AuthorLogin) &&
+                                        githubAccountMap.TryGetValue(c.AuthorLogin, out var mappedUserId))
+                                    {
+                                        userId = mappedUserId;
+                                    }
+
+                                    var entity = new GitHubCommit
+                                    {
+                                        RepoId = repo.RepoId,
+                                        UserId = userId,
+                                        CommitHash = c.Sha,
+                                        Message = c.Message.Length > 1000 ? c.Message[..1000] : c.Message,
+                                        CommittedAt = c.CommittedAt,
+                                        CommitUrl = c.Url
+                                    };
+
+                                    newCommitEntities.Add(entity);
+                                }
+
+                                if (newCommitEntities.Count > 0)
+                                {
+                                    _db.GitHubCommits.AddRange(newCommitEntities);
+                                    await _db.SaveChangesAsync(ct);
+
+                                    inserted += newCommitEntities.Count;
+
+                                    foreach (var entity in newCommitEntities)
+                                    {
+                                        commitIdsForSnapshot.Add(entity.CommitId);
+                                    }
+                                }
+                            }
                         }
 
-                        var commitShas = commits
-                            .Select(c => c.Sha)
-                            .Where(sha => !string.IsNullOrWhiteSpace(sha))
-                            .Distinct()
-                            .ToList();
-
-                        var existingCommits = await _db.GitHubCommits
-                            .Where(x => x.RepoId == repo.RepoId && commitShas.Contains(x.CommitHash))
-                            .ToListAsync(ct);
-
-                        var existingBySha = existingCommits
-                            .GroupBy(x => x.CommitHash)
-                            .ToDictionary(g => g.Key, g => g.First());
-
-                        var newCommitEntities = new List<GitHubCommit>();
-
-                        foreach (var c in commits)
+                        if (run.SyncGithubPullRequests)
                         {
-                            if (existingBySha.TryGetValue(c.Sha, out var existing))
+                            var pullRequests = await _gitHub.GetPullRequestsAsync(
+                                githubCfg.Org!,
+                                repo.RepoName,
+                                fromUtc,
+                                toUtc,
+                                githubCfg.TokenEncrypted!,
+                                ct);
+
+                            if (pullRequests.Count > 0)
                             {
-                                skipped++;
-                                commitIdsForSnapshot.Add(existing.CommitId);
-                                continue;
-                            }
+                                var prNumbers = pullRequests
+                                    .Select(pr => pr.Number)
+                                    .Distinct()
+                                    .ToList();
 
-                            int? userId = null;
-                            if (!string.IsNullOrWhiteSpace(c.AuthorLogin) &&
-                                githubAccountMap.TryGetValue(c.AuthorLogin, out var mappedUserId))
-                            {
-                                userId = mappedUserId;
-                            }
+                                var existingPullRequests = await _db.GitHubPullRequests
+                                    .Where(x => x.RepoId == repo.RepoId && prNumbers.Contains(x.PrNumber))
+                                    .ToListAsync(ct);
 
-                            var entity = new GitHubCommit
-                            {
-                                RepoId = repo.RepoId,
-                                UserId = userId,
-                                CommitHash = c.Sha,
-                                Message = c.Message.Length > 1000 ? c.Message[..1000] : c.Message,
-                                CommittedAt = c.CommittedAt,
-                                CommitUrl = c.Url
-                            };
+                                var existingPrByNumber = existingPullRequests
+                                    .GroupBy(x => x.PrNumber)
+                                    .ToDictionary(g => g.Key, g => g.First());
 
-                            newCommitEntities.Add(entity);
-                        }
+                                var newPullRequestEntities = new List<GitHubPullRequest>();
 
-                        if (newCommitEntities.Count > 0)
-                        {
-                            _db.GitHubCommits.AddRange(newCommitEntities);
-                            await _db.SaveChangesAsync(ct);
+                                foreach (var pr in pullRequests)
+                                {
+                                    if (existingPrByNumber.TryGetValue(pr.Number, out var existingPr))
+                                    {
+                                        var changed =
+                                            existingPr.Title != pr.Title ||
+                                            existingPr.Description != pr.Description ||
+                                            existingPr.State != pr.State ||
+                                            existingPr.AuthorLogin != pr.AuthorLogin ||
+                                            existingPr.CreatedAtGithub != pr.CreatedAt ||
+                                            existingPr.UpdatedAtGithub != pr.UpdatedAt ||
+                                            existingPr.MergedAtGithub != pr.MergedAt ||
+                                            existingPr.ClosedAtGithub != pr.ClosedAt ||
+                                            existingPr.PrUrl != pr.Url;
 
-                            inserted += newCommitEntities.Count;
+                                        if (changed)
+                                        {
+                                            existingPr.Title = pr.Title.Length > 500 ? pr.Title[..500] : pr.Title;
+                                            existingPr.Description = pr.Description;
+                                            existingPr.State = pr.State;
+                                            existingPr.AuthorLogin = pr.AuthorLogin;
+                                            existingPr.CreatedAtGithub = pr.CreatedAt;
+                                            existingPr.UpdatedAtGithub = pr.UpdatedAt;
+                                            existingPr.MergedAtGithub = pr.MergedAt;
+                                            existingPr.ClosedAtGithub = pr.ClosedAt;
+                                            existingPr.PrUrl = pr.Url;
 
-                            foreach (var entity in newCommitEntities)
-                            {
-                                commitIdsForSnapshot.Add(entity.CommitId);
+                                            prUpdated++;
+                                        }
+                                        else
+                                        {
+                                            prSkipped++;
+                                        }
+
+                                        pullRequestIdsForSnapshot.Add(existingPr.PullRequestId);
+                                        continue;
+                                    }
+
+                                    var newPrEntity = new GitHubPullRequest
+                                    {
+                                        RepoId = repo.RepoId,
+                                        PrNumber = pr.Number,
+                                        Title = pr.Title.Length > 500 ? pr.Title[..500] : pr.Title,
+                                        Description = pr.Description,
+                                        State = pr.State,
+                                        AuthorLogin = pr.AuthorLogin,
+                                        CreatedAtGithub = pr.CreatedAt,
+                                        UpdatedAtGithub = pr.UpdatedAt,
+                                        MergedAtGithub = pr.MergedAt,
+                                        ClosedAtGithub = pr.ClosedAt,
+                                        PrUrl = pr.Url
+                                    };
+
+                                    newPullRequestEntities.Add(newPrEntity);
+                                }
+
+                                if (newPullRequestEntities.Count > 0)
+                                {
+                                    _db.GitHubPullRequests.AddRange(newPullRequestEntities);
+                                    await _db.SaveChangesAsync(ct);
+
+                                    prInserted += newPullRequestEntities.Count;
+
+                                    foreach (var entity in newPullRequestEntities)
+                                    {
+                                        pullRequestIdsForSnapshot.Add(entity.PullRequestId);
+                                    }
+                                }
+
+                                await _db.SaveChangesAsync(ct);
                             }
                         }
 
@@ -169,10 +318,9 @@ namespace SWP391.Group2.Application.Features.Sync.Command
                         repoErrors.Add($"{repo.RepoName}: {TrimMsg(exRepo.Message, 200)}");
                     }
                 }
-
                 int? snapshotId = null;
 
-                if (commitIdsForSnapshot.Count > 0)
+                if (commitIdsForSnapshot.Count > 0 || pullRequestIdsForSnapshot.Count > 0)
                 {
                     var snapshot = new Snapshot
                     {
@@ -186,6 +334,7 @@ namespace SWP391.Group2.Application.Features.Sync.Command
 
                     snapshotId = snapshot.SnapshotId;
 
+                    // SnapshotCommits
                     var existingSnapshotCommitIds = await _db.SnapshotCommits
                         .Where(x => x.SnapshotId == snapshotId.Value)
                         .Select(x => x.CommitId)
@@ -205,14 +354,37 @@ namespace SWP391.Group2.Application.Features.Sync.Command
                     if (newSnapshotCommits.Count > 0)
                     {
                         _db.SnapshotCommits.AddRange(newSnapshotCommits);
-                        await _db.SaveChangesAsync(ct);
                     }
+
+                    // SnapshotPullRequests
+                    var existingSnapshotPullRequestIds = await _db.SnapshotPullRequests
+                        .Where(x => x.SnapshotId == snapshotId.Value)
+                        .Select(x => x.PullRequestId)
+                        .ToListAsync(ct);
+
+                    var existingSnapshotPullRequestIdSet = existingSnapshotPullRequestIds.ToHashSet();
+
+                    var newSnapshotPullRequests = pullRequestIdsForSnapshot
+                        .Where(pullRequestId => !existingSnapshotPullRequestIdSet.Contains(pullRequestId))
+                        .Select(pullRequestId => new SnapshotPullRequest
+                        {
+                            SnapshotId = snapshotId.Value,
+                            PullRequestId = pullRequestId
+                        })
+                        .ToList();
+
+                    if (newSnapshotPullRequests.Count > 0)
+                    {
+                        _db.SnapshotPullRequests.AddRange(newSnapshotPullRequests);
+                    }
+
+                    await _db.SaveChangesAsync(ct);
                 }
 
                 var ok = repoFail == 0;
                 var note = ok
-                    ? $"OK - Repos OK {repoOk}/{repos.Count}, Inserted {inserted}, Skipped {skipped}, SnapshotId={(snapshotId.HasValue ? snapshotId.Value : 0)}, Range {fromUtc:yyyy-MM-dd HH:mm:ss} -> {toUtc:yyyy-MM-dd HH:mm:ss} UTC."
-                    : $"PARTIAL - Repos OK {repoOk}/{repos.Count}, Failed {repoFail}, Inserted {inserted}, Skipped {skipped}, SnapshotId={(snapshotId.HasValue ? snapshotId.Value : 0)}, Range {fromUtc:yyyy-MM-dd HH:mm:ss} -> {toUtc:yyyy-MM-dd HH:mm:ss} UTC. Errors: {string.Join(" | ", repoErrors)}";
+                    ? $"OK - Repos OK {repoOk}/{repos.Count}, Commit Inserted {inserted}, Commit Skipped {skipped}, PR Inserted {prInserted}, PR Updated {prUpdated}, PR Skipped {prSkipped}, SnapshotId={(snapshotId.HasValue ? snapshotId.Value : 0)}, Range {fromUtc:yyyy-MM-dd HH:mm:ss} -> {toUtc:yyyy-MM-dd HH:mm:ss} UTC."
+                    : $"PARTIAL - Repos OK {repoOk}/{repos.Count}, Failed {repoFail}, Commit Inserted {inserted}, Commit Skipped {skipped}, PR Inserted {prInserted}, PR Updated {prUpdated}, PR Skipped {prSkipped}, SnapshotId={(snapshotId.HasValue ? snapshotId.Value : 0)}, Range {fromUtc:yyyy-MM-dd HH:mm:ss} -> {toUtc:yyyy-MM-dd HH:mm:ss} UTC. Errors: {string.Join(" | ", repoErrors)}";
 
                 return new GitHubSyncResult(ok, TrimMsg(note, 1000), snapshotId);
             }
@@ -420,12 +592,39 @@ namespace SWP391.Group2.Application.Features.Sync.Command
 
             string linksNote = "N/A";
 
-            if (jiraSelected && githubSelected && jiraOk && githubOk && snapshotId.HasValue)
+            //if (jiraSelected && githubSelected && jiraOk && githubOk && snapshotId.HasValue)
+            //{
+            //    try
+            //    {
+            //        var (ok, note) = await BuildIssueCommitLinksAsync(snapshotId.Value, run.ProjectId, ct);
+            //        linksNote = ok ? note : $"FAILED - {note}";
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        linksNote = $"FAILED - {TrimMsg(ex.Message)}";
+            //    }
+            //}
+            //else if (jiraSelected && githubSelected)
+            //{
+            //    linksNote = "SKIPPED - Need both Jira and GitHub SUCCESS and a Snapshot.";
+            //}
+
+            if (jiraSelected && githubSelected && jiraOk && githubOk && snapshotId.HasValue && run.SyncGithubCommits)
             {
                 try
                 {
-                    var (ok, note) = await BuildIssueCommitLinksAsync(snapshotId.Value, run.ProjectId, ct);
-                    linksNote = ok ? note : $"FAILED - {note}";
+                    var hasSnapshotCommits = await _db.SnapshotCommits
+                        .AnyAsync(x => x.SnapshotId == snapshotId.Value, ct);
+
+                    if (hasSnapshotCommits)
+                    {
+                        var (ok, note) = await BuildIssueCommitLinksAsync(snapshotId.Value, run.ProjectId, ct);
+                        linksNote = ok ? note : $"FAILED - {note}";
+                    }
+                    else
+                    {
+                        linksNote = "SKIPPED - No commits in snapshot for linking.";
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -434,7 +633,7 @@ namespace SWP391.Group2.Application.Features.Sync.Command
             }
             else if (jiraSelected && githubSelected)
             {
-                linksNote = "SKIPPED - Need both Jira and GitHub SUCCESS and a Snapshot.";
+                linksNote = "SKIPPED - Need both Jira and GitHub SUCCESS, a Snapshot, and GitHub commit sync.";
             }
 
             //run.Notes = $"JIRA: {jiraNote}; GITHUB: {githubNote}";

@@ -38,6 +38,9 @@ namespace SWP391.Group2.Infrastructure.Persistence
         public DbSet<Role> Roles => Set<Role>();
         public DbSet<UserGroup> UserGroups => Set<UserGroup>();
 
+        public DbSet<GitHubPullRequest> GitHubPullRequests => Set<GitHubPullRequest>();
+        public DbSet<SnapshotPullRequest> SnapshotPullRequests => Set<SnapshotPullRequest>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -576,6 +579,91 @@ namespace SWP391.Group2.Infrastructure.Persistence
                 entity.HasOne(x => x.User)
                     .WithMany()
                     .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<GitHubPullRequest>(entity =>
+            {
+                entity.ToTable("GitHubPullRequests", "dbo");
+                entity.HasKey(x => x.PullRequestId);
+
+                entity.Property(x => x.PullRequestId).HasColumnName("pull_request_id");
+                entity.Property(x => x.RepoId).HasColumnName("repo_id");
+
+                entity.Property(x => x.PrNumber)
+                    .HasColumnName("pr_number")
+                    .IsRequired();
+
+                entity.Property(x => x.Title)
+                    .HasColumnName("title")
+                    .HasMaxLength(500)
+                    .IsRequired();
+
+                entity.Property(x => x.Description)
+                    .HasColumnName("description");
+
+                entity.Property(x => x.State)
+                    .HasColumnName("state")
+                    .HasMaxLength(20)
+                    .IsRequired();
+
+                entity.Property(x => x.AuthorLogin)
+                    .HasColumnName("author_login")
+                    .HasMaxLength(255);
+
+                entity.Property(x => x.CreatedAtGithub).HasColumnName("created_at_github");
+                entity.Property(x => x.UpdatedAtGithub).HasColumnName("updated_at_github");
+                entity.Property(x => x.MergedAtGithub).HasColumnName("merged_at_github");
+                entity.Property(x => x.ClosedAtGithub).HasColumnName("closed_at_github");
+
+                entity.Property(x => x.PrUrl)
+                    .HasColumnName("pr_url")
+                    .HasMaxLength(1000);
+
+                entity.Property(x => x.CreatedAt)
+                    .HasColumnName("created_at")
+                    .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                entity.HasIndex(x => new { x.RepoId, x.PrNumber })
+                    .IsUnique()
+                    .HasDatabaseName("UQ_GitHubPullRequests_Repo_PrNumber");
+
+                entity.HasIndex(x => new { x.RepoId, x.CreatedAtGithub })
+                    .HasDatabaseName("IX_GitHubPullRequests_repo_id_created_at_github");
+
+                entity.HasIndex(x => new { x.RepoId, x.UpdatedAtGithub })
+                    .HasDatabaseName("IX_GitHubPullRequests_repo_id_updated_at_github");
+
+                entity.HasOne(x => x.Repository)
+                    .WithMany()
+                    .HasForeignKey(x => x.RepoId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<SnapshotPullRequest>(entity =>
+            {
+                entity.ToTable("SnapshotPullRequests", "dbo");
+                entity.HasKey(x => x.SnapshotPullRequestId);
+
+                entity.Property(x => x.SnapshotPullRequestId).HasColumnName("snapshot_pull_request_id");
+                entity.Property(x => x.SnapshotId).HasColumnName("snapshot_id");
+                entity.Property(x => x.PullRequestId).HasColumnName("pull_request_id");
+
+                entity.HasIndex(x => x.SnapshotId)
+                    .HasDatabaseName("IX_SnapshotPullRequests_snapshot_id");
+
+                entity.HasIndex(x => new { x.SnapshotId, x.PullRequestId })
+                    .IsUnique()
+                    .HasDatabaseName("UQ_SnapshotPullRequests");
+
+                entity.HasOne(x => x.Snapshot)
+                    .WithMany(x => x.SnapshotPullRequests)
+                    .HasForeignKey(x => x.SnapshotId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.PullRequest)
+                    .WithMany(x => x.SnapshotPullRequests)
+                    .HasForeignKey(x => x.PullRequestId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }
