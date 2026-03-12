@@ -175,6 +175,15 @@ namespace SWP391.Group2.Infrastructure.Persistence
                 entity.Property(x => x.IncludeJira).HasColumnName("include_jira");
                 entity.Property(x => x.IncludeGithub).HasColumnName("include_github");
 
+                // GitHub sync options
+                entity.Property(x => x.GithubFrom).HasColumnName("github_from");
+                entity.Property(x => x.GithubTo).HasColumnName("github_to");
+                entity.Property(x => x.SyncGithubCommits).HasColumnName("sync_github_commits");
+                entity.Property(x => x.SyncGithubPullRequests).HasColumnName("sync_github_pull_requests");
+                entity.Property(x => x.GithubSyncMode)
+                    .HasColumnName("github_sync_mode")
+                    .HasMaxLength(20);
+
                 entity.Property(x => x.RunStatus)
                     .HasColumnName("run_status")
                     .HasMaxLength(10)
