@@ -43,7 +43,6 @@ namespace SWP391.Group2.Application.Features.Sync.Queries
                 run.StartedAt,
                 run.FinishedAt,
                 run.TriggeredByUserId,
-                //run.TriggeredByRole,
                 snapshotId
             );
         }

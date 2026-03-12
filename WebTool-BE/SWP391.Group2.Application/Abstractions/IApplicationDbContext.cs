@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using SWP391.Group2.Domain.Entities;
 using System;
 using System.Collections.Generic;
@@ -29,6 +30,8 @@ namespace SWP391.Group2.Application.Abstractions
         DbSet<ClassStudent> ClassStudents { get; }
         DbSet<UserGroup> UserGroups { get; }
         DbSet<Role> Roles { get; }
+        DbSet<GitHubPullRequest> GitHubPullRequests { get; }
+        DbSet<SnapshotPullRequest> SnapshotPullRequests { get; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }

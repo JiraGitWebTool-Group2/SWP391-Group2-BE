@@ -24,5 +24,13 @@ namespace SWP391.Group2.Application.Abstractions.GitHub
             string token,
             CancellationToken ct
         );
+
+        Task<IReadOnlyList<GitHubPullRequestDto>> GetPullRequestsAsync(
+            string org,
+            string repoName,
+            DateTime fromUtc,
+            DateTime toUtc,
+            string token,
+            CancellationToken ct);
     }
 }

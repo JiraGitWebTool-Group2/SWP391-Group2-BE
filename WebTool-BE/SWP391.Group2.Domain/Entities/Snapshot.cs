@@ -16,5 +16,6 @@ namespace SWP391.Group2.Domain.Entities
         // Navigation
         public SyncRun SyncRun { get; set; } = default!;
         public ICollection<IssueCommitLink> IssueCommitLinks { get; set; } = new List<IssueCommitLink>();
+        public ICollection<SnapshotPullRequest> SnapshotPullRequests { get; set; } = new List<SnapshotPullRequest>();
     }
 }
