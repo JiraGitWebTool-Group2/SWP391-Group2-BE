@@ -14,7 +14,7 @@ namespace SWP391.Group2.Application.Features.Sync.Dtos
         DateTime StartedAt,
         DateTime? FinishedAt,
         int? TriggeredByUserId,
-        string? TriggeredByRole,
+        //string? TriggeredByRole,
         int? SnapshotId
     );
 }
