@@ -13,7 +13,7 @@ namespace SWP391.Group2.Domain.Entities
         public int? TriggeredByUserId { get; set; }
 
         // New field from updated DB
-        public string? TriggeredByRole { get; set; }   // ADMIN / LECTURER / STUDENT
+        //public string? TriggeredByRole { get; set; }   // ADMIN / LECTURER / STUDENT
 
         public string TriggerType { get; set; } = default!; // MANUAL / AUTO
         public string ScopeType { get; set; } = default!;   // SPRINT / BACKLOG / CUSTOM

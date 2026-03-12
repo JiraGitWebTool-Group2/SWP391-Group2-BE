@@ -63,7 +63,7 @@ namespace SWP391.Group2.Application.Features.Sync.Command
             {
                 ProjectId = request.ProjectId,
                 TriggeredByUserId = request.TriggeredByUserId,
-                TriggeredByRole = triggeredByRole,
+                //TriggeredByRole = triggeredByRole,
                 TriggerType = triggerType,
                 ScopeType = scope,
                 SprintId = request.SprintId,
