@@ -5,7 +5,7 @@ namespace SWP391.Group2.Application.Features.Semesters.Commands;
 
 public record CreateSemesterCommand(
     string Code,
-    string Name,
+    //string Name,
     DateTime StartDate,
     DateTime EndDate,
     string Status

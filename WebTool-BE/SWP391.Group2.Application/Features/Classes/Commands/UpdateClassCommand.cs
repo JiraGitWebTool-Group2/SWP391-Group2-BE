@@ -7,8 +7,8 @@ public record UpdateClassCommand(
     int ClassId,
     int SemesterId,
     string ClassCode,
-    string CourseCode,
-    string? ClassName,
+    //string CourseCode,
+    //string? ClassName,
     int? LecturerUserId,
     string Status
 ) : IRequest<ClassDto?>;

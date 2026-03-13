@@ -3,7 +3,7 @@
 public class CreateSemesterRequest
 {
     public string Code { get; set; } = null!;
-    public string Name { get; set; } = null!;
+    //public string Name { get; set; } = null!;
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public string Status { get; set; } = "PLANNING";

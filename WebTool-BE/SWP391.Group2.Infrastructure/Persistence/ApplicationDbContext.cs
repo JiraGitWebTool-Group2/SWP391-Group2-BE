@@ -658,7 +658,7 @@ namespace SWP391.Group2.Infrastructure.Persistence
 
                 entity.Property(x => x.SemesterId).HasColumnName("semester_id");
                 entity.Property(x => x.Code).HasColumnName("code").HasMaxLength(20).IsRequired();
-                entity.Property(x => x.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                //entity.Property(x => x.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
                 entity.Property(x => x.StartDate).HasColumnName("start_date");
                 entity.Property(x => x.EndDate).HasColumnName("end_date");
                 entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
@@ -677,8 +677,8 @@ namespace SWP391.Group2.Infrastructure.Persistence
                 entity.Property(x => x.ClassId).HasColumnName("class_id");
                 entity.Property(x => x.SemesterId).HasColumnName("semester_id");
                 entity.Property(x => x.ClassCode).HasColumnName("class_code").HasMaxLength(50).IsRequired();
-                entity.Property(x => x.CourseCode).HasColumnName("course_code").HasMaxLength(50).IsRequired();
-                entity.Property(x => x.ClassName).HasColumnName("class_name").HasMaxLength(200);
+                //entity.Property(x => x.CourseCode).HasColumnName("course_code").HasMaxLength(50).IsRequired();
+                //entity.Property(x => x.ClassName).HasColumnName("class_name").HasMaxLength(200);
                 entity.Property(x => x.LecturerUserId).HasColumnName("lecturer_user_id");
                 entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
                 entity.Property(x => x.CreatedAt).HasColumnName("created_at");
@@ -691,7 +691,7 @@ namespace SWP391.Group2.Infrastructure.Persistence
                     .HasForeignKey(x => x.SemesterId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                entity.HasIndex(x => new { x.SemesterId, x.CourseCode, x.ClassCode })
+                entity.HasIndex(x => new { x.SemesterId, x.ClassCode })
                     .IsUnique();
             });
 

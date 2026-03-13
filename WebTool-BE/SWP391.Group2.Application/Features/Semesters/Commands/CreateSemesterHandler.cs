@@ -34,7 +34,7 @@ public class CreateSemesterHandler : IRequestHandler<CreateSemesterCommand, Seme
         var entity = new Semester
         {
             Code = request.Code.Trim(),
-            Name = request.Name.Trim(),
+            //Name = request.Name.Trim(),
             StartDate = request.StartDate.Date,
             EndDate = request.EndDate.Date,
             Status = status,
@@ -49,7 +49,7 @@ public class CreateSemesterHandler : IRequestHandler<CreateSemesterCommand, Seme
         {
             SemesterId = entity.SemesterId,
             Code = entity.Code,
-            Name = entity.Name,
+            //Name = entity.Name,
             StartDate = entity.StartDate,
             EndDate = entity.EndDate,
             Status = entity.Status,

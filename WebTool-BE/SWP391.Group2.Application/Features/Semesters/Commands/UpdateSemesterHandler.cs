@@ -37,7 +37,7 @@ public class UpdateSemesterHandler : IRequestHandler<UpdateSemesterCommand, Seme
             throw new ArgumentException("Semester code already exists.");
 
         entity.Code = request.Code.Trim();
-        entity.Name = request.Name.Trim();
+        //entity.Name = request.Name.Trim();
         entity.StartDate = request.StartDate.Date;
         entity.EndDate = request.EndDate.Date;
         entity.Status = status;
@@ -49,7 +49,7 @@ public class UpdateSemesterHandler : IRequestHandler<UpdateSemesterCommand, Seme
         {
             SemesterId = entity.SemesterId,
             Code = entity.Code,
-            Name = entity.Name,
+            //Name = entity.Name,
             StartDate = entity.StartDate,
             EndDate = entity.EndDate,
             Status = entity.Status,
