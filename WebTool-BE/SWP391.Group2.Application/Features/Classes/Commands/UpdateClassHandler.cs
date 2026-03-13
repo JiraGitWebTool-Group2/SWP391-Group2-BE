@@ -44,7 +44,7 @@ public class UpdateClassHandler : IRequestHandler<UpdateClassCommand, ClassDto?>
 
         var duplicated = await _context.Classes.AnyAsync(
             x => x.SemesterId == request.SemesterId
-              && x.CourseCode == request.CourseCode
+              //&& x.CourseCode == request.CourseCode
               && x.ClassCode == request.ClassCode
               && x.ClassId != request.ClassId,
             cancellationToken);
@@ -54,8 +54,8 @@ public class UpdateClassHandler : IRequestHandler<UpdateClassCommand, ClassDto?>
 
         entity.SemesterId = request.SemesterId;
         entity.ClassCode = request.ClassCode.Trim();
-        entity.CourseCode = request.CourseCode.Trim();
-        entity.ClassName = string.IsNullOrWhiteSpace(request.ClassName) ? null : request.ClassName.Trim();
+        //entity.CourseCode = request.CourseCode.Trim();
+        //entity.ClassName = string.IsNullOrWhiteSpace(request.ClassName) ? null : request.ClassName.Trim();
         entity.LecturerUserId = request.LecturerUserId;
         entity.Status = status;
         entity.UpdatedAt = DateTime.UtcNow;
@@ -67,10 +67,10 @@ public class UpdateClassHandler : IRequestHandler<UpdateClassCommand, ClassDto?>
             ClassId = entity.ClassId,
             SemesterId = entity.SemesterId,
             SemesterCode = semester.Code,
-            SemesterName = semester.Name,
+            //SemesterName = semester.Name,
             ClassCode = entity.ClassCode,
-            CourseCode = entity.CourseCode,
-            ClassName = entity.ClassName,
+            //CourseCode = entity.CourseCode,
+            //ClassName = entity.ClassName,
             LecturerUserId = entity.LecturerUserId,
             Status = entity.Status,
             CreatedAt = entity.CreatedAt,

@@ -39,7 +39,7 @@ public class CreateClassHandler : IRequestHandler<CreateClassCommand, ClassDto>
 
         var duplicated = await _context.Classes.AnyAsync(
             x => x.SemesterId == request.SemesterId
-              && x.CourseCode == request.CourseCode
+              //&& x.CourseCode == request.CourseCode
               && x.ClassCode == request.ClassCode,
             cancellationToken);
 
@@ -50,8 +50,8 @@ public class CreateClassHandler : IRequestHandler<CreateClassCommand, ClassDto>
         {
             SemesterId = request.SemesterId,
             ClassCode = request.ClassCode.Trim(),
-            CourseCode = request.CourseCode.Trim(),
-            ClassName = string.IsNullOrWhiteSpace(request.ClassName) ? null : request.ClassName.Trim(),
+            //CourseCode = request.CourseCode.Trim(),
+            //ClassName = string.IsNullOrWhiteSpace(request.ClassName) ? null : request.ClassName.Trim(),
             LecturerUserId = request.LecturerUserId,
             Status = status,
             CreatedAt = DateTime.UtcNow,
@@ -66,10 +66,10 @@ public class CreateClassHandler : IRequestHandler<CreateClassCommand, ClassDto>
             ClassId = entity.ClassId,
             SemesterId = entity.SemesterId,
             SemesterCode = semester.Code,
-            SemesterName = semester.Name,
+            //SemesterName = semester.Name,
             ClassCode = entity.ClassCode,
-            CourseCode = entity.CourseCode,
-            ClassName = entity.ClassName,
+            //CourseCode = entity.CourseCode,
+            //ClassName = entity.ClassName,
             LecturerUserId = entity.LecturerUserId,
             Status = entity.Status,
             CreatedAt = entity.CreatedAt,

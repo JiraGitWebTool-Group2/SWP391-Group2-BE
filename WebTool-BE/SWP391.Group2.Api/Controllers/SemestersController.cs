@@ -25,7 +25,7 @@ public class SemestersController : ControllerBase
         var result = await _mediator.Send(
             new CreateSemesterCommand(
                 request.Code,
-                request.Name,
+                //request.Name,
                 request.StartDate,
                 request.EndDate,
                 request.Status),
@@ -35,7 +35,7 @@ public class SemestersController : ControllerBase
         {
             SemesterId = result.SemesterId,
             Code = result.Code,
-            Name = result.Name,
+            //Name = result.Name,
             StartDate = result.StartDate,
             EndDate = result.EndDate,
             Status = result.Status,
@@ -55,7 +55,7 @@ public class SemestersController : ControllerBase
         {
             SemesterId = x.SemesterId,
             Code = x.Code,
-            Name = x.Name,
+            //Name = x.Name,
             StartDate = x.StartDate,
             EndDate = x.EndDate,
             Status = x.Status,
@@ -78,7 +78,7 @@ public class SemestersController : ControllerBase
         {
             SemesterId = result.SemesterId,
             Code = result.Code,
-            Name = result.Name,
+            //Name = result.Name,
             StartDate = result.StartDate,
             EndDate = result.EndDate,
             Status = result.Status,
@@ -99,7 +99,7 @@ public class SemestersController : ControllerBase
             new UpdateSemesterCommand(
                 id,
                 request.Code,
-                request.Name,
+                //request.Name,
                 request.StartDate,
                 request.EndDate,
                 request.Status),
@@ -112,7 +112,7 @@ public class SemestersController : ControllerBase
         {
             SemesterId = result.SemesterId,
             Code = result.Code,
-            Name = result.Name,
+            //Name = result.Name,
             StartDate = result.StartDate,
             EndDate = result.EndDate,
             Status = result.Status,

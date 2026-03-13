@@ -23,7 +23,7 @@ public class GetSemestersHandler : IRequestHandler<GetSemestersQuery, List<Semes
             {
                 SemesterId = x.SemesterId,
                 Code = x.Code,
-                Name = x.Name,
+                //Name = x.Name,
                 StartDate = x.StartDate,
                 EndDate = x.EndDate,
                 Status = x.Status,

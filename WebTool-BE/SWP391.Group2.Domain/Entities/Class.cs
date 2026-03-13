@@ -5,8 +5,8 @@ public class Class
     public int ClassId { get; set; }
     public int SemesterId { get; set; }
     public string ClassCode { get; set; } = null!;
-    public string CourseCode { get; set; } = null!;
-    public string? ClassName { get; set; }
+    //public string CourseCode { get; set; } = null!;
+    //public string? ClassName { get; set; }
     public int? LecturerUserId { get; set; }
     public string Status { get; set; } = "PLANNING";
     public DateTime CreatedAt { get; set; }
