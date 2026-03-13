@@ -10,12 +10,28 @@ namespace SWP391.Group2.Application.Abstractions.Jira
         string IssueKey,
         string Summary,
         string? Description,
+
         string IssueType,
         string Priority,
         string Status,
+
+        string? RawIssueType,
+        string? RawPriority,
+        string? RawStatus,
+
         decimal? StoryPoints,
         string Url,
-        string? AssigneeAccountId
+
+        string? AssigneeAccountId,
+        string? AssigneeDisplayName,
+
+        DateTime? JiraCreatedAt,
+        DateTime? JiraUpdatedAt,
+        DateTime? JiraResolvedAt,
+
+        string? ParentIssueKey,
+        string? SprintExternalId,
+        string? SprintName
     );
 
     public interface IJiraClient
@@ -23,9 +39,9 @@ namespace SWP391.Group2.Application.Abstractions.Jira
         Task<IReadOnlyList<JiraIssueDto>> SearchIssuesAsync(
             string baseUrl,
             string jql,
-            int maxResults,
             string token,
-            CancellationToken ct
-        );
+            string? storyPointsFieldKey,
+            string? sprintFieldKey,
+            CancellationToken ct);
     }
 }

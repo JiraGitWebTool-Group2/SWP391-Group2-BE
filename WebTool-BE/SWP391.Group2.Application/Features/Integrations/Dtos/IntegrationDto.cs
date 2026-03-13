@@ -6,16 +6,6 @@ using System.Threading.Tasks;
 
 namespace SWP391.Group2.Application.Features.Integrations.Dtos
 {
-    //public record IntegrationDto(
-    //    int ProjectId,
-    //    string Provider,
-    //    string? BaseUrl,
-    //    string? ProjectKey,
-    //    string? Org,
-    //    bool HasToken,
-    //    DateTime UpdatedAt
-    //);
-
     public record IntegrationDto(
         int IntegrationId,
         int ProjectId,
@@ -29,6 +19,12 @@ namespace SWP391.Group2.Application.Features.Integrations.Dtos
         string? VisibilityStatus,
         DateTime? LastVerifiedAt,
         string? VerificationNote,
+
+        string? JiraStoryPointsFieldKey,
+        string? JiraSprintFieldKey,
+        string? JiraBoardId,
+        DateTime? LastJiraSyncAt,
+
         DateTime CreatedAt,
         DateTime UpdatedAt
     );

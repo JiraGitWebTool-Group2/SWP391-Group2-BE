@@ -27,6 +27,241 @@ namespace SWP391.Group2.Application.Features.Sync.Command
             int? SnapshotId
         );
 
+        private sealed record JiraSyncResult(
+            bool Ok,
+            string Note
+        );
+
+        private async Task<string> BuildJiraJqlAsync(
+            SyncRun run,
+            ProjectIntegration jiraCfg,
+            CancellationToken ct)
+        {
+            var projectKey = jiraCfg.ProjectKey!.Trim().Replace("\"", "\\\"");
+
+            return run.ScopeType switch
+            {
+                "BACKLOG" => $"project = \"{projectKey}\" AND sprint IS EMPTY ORDER BY updated DESC",
+
+                "SPRINT" => await BuildSprintJqlAsync(run, projectKey, ct),
+
+                _ => $"project = \"{projectKey}\" ORDER BY updated DESC"
+            };
+        }
+
+        private async Task<string> BuildSprintJqlAsync(
+            SyncRun run,
+            string projectKey,
+            CancellationToken ct)
+        {
+            if (run.SprintId is null)
+                throw new Exception("Sprint scope requires SprintId.");
+
+            var sprint = await _db.Sprints
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.SprintId == run.SprintId.Value && x.ProjectId == run.ProjectId, ct);
+
+            if (sprint is null)
+                throw new Exception("Sprint not found for this project.");
+
+            if (!string.IsNullOrWhiteSpace(sprint.JiraSprintId))
+                return $"project = \"{projectKey}\" AND sprint = {sprint.JiraSprintId} ORDER BY updated DESC";
+
+            var sprintName = sprint.SprintName.Replace("\"", "\\\"");
+            return $"project = \"{projectKey}\" AND sprint = \"{sprintName}\" ORDER BY updated DESC";
+        }
+
+        private async Task<Dictionary<string, int?>> BuildJiraAccountMapAsync(int projectId, CancellationToken ct)
+        {
+            return await _db.ProjectIntegrations
+                .AsNoTracking()
+                .Where(x => x.ProjectId == projectId
+                         && x.Provider == "JIRA"
+                         && x.LinkedAccount != null)
+                .GroupBy(x => x.LinkedAccount!)
+                .Select(g => new
+                {
+                    LinkedAccount = g.Key,
+                    UserId = g.Select(x => x.CreatedByUserId).FirstOrDefault()
+                })
+                .ToDictionaryAsync(
+                    x => x.LinkedAccount,
+                    x => (int?)x.UserId,
+                    ct);
+        }
+
+        private async Task<JiraSyncResult> SyncJiraAsync(
+    SyncRun run,
+    ProjectIntegration? jiraCfg,
+    CancellationToken ct)
+        {
+            if (jiraCfg is null)
+                return new JiraSyncResult(false, "FAILED - Missing Jira integration config.");
+
+            if (string.IsNullOrWhiteSpace(jiraCfg.BaseUrl)
+                || string.IsNullOrWhiteSpace(jiraCfg.ProjectKey)
+                || string.IsNullOrWhiteSpace(jiraCfg.TokenEncrypted))
+            {
+                return new JiraSyncResult(false, "FAILED - Jira config incomplete (baseUrl/projectKey/token).");
+            }
+
+            try
+            {
+                var jql = await BuildJiraJqlAsync(run, jiraCfg, ct);
+
+                var jiraAccountMap = await BuildJiraAccountMapAsync(run.ProjectId, ct);
+
+                var issues = await _jira.SearchIssuesAsync(
+                    jiraCfg.BaseUrl!,
+                    jql,
+                    jiraCfg.TokenEncrypted!,
+                    jiraCfg.JiraStoryPointsFieldKey,
+                    jiraCfg.JiraSprintFieldKey,
+                    ct);
+
+                int inserted = 0;
+                int updated = 0;
+
+                Sprint? selectedSprint = null;
+                if (run.SprintId.HasValue)
+                {
+                    selectedSprint = await _db.Sprints
+                        .FirstOrDefaultAsync(x => x.SprintId == run.SprintId.Value && x.ProjectId == run.ProjectId, ct);
+                }
+
+                foreach (var it in issues)
+                {
+                    var key = (it.IssueKey ?? "").Trim().ToUpperInvariant();
+                    if (string.IsNullOrWhiteSpace(key)) continue;
+
+                    var existing = await _db.JiraIssues
+                        .FirstOrDefaultAsync(x => x.ProjectId == run.ProjectId && x.IssueKey == key, ct);
+
+                    var now = DateTime.UtcNow;
+                    var summary = (it.Summary ?? "").Trim();
+                    if (summary.Length > 500) summary = summary[..500];
+
+                    int? assigneeUserId = null;
+                    if (!string.IsNullOrWhiteSpace(it.AssigneeAccountId)
+                        && jiraAccountMap.TryGetValue(it.AssigneeAccountId, out var mappedUserId))
+                    {
+                        assigneeUserId = mappedUserId;
+                    }
+
+                    int? sprintId = null;
+                    if (run.ScopeType == "SPRINT" && selectedSprint is not null)
+                    {
+                        sprintId = selectedSprint.SprintId;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(it.SprintExternalId))
+                    {
+                        var sprint = await _db.Sprints.FirstOrDefaultAsync(
+                            x => x.ProjectId == run.ProjectId && x.JiraSprintId == it.SprintExternalId,
+                            ct);
+
+                        if (sprint is not null)
+                        {
+                            sprintId = sprint.SprintId;
+                        }
+                        else if (!string.IsNullOrWhiteSpace(it.SprintName))
+                        {
+                            sprint = new Sprint
+                            {
+                                ProjectId = run.ProjectId,
+                                JiraSprintId = it.SprintExternalId,
+                                SprintName = it.SprintName!,
+                                CreatedAt = now
+                            };
+
+                            _db.Sprints.Add(sprint);
+                            await _db.SaveChangesAsync(ct);
+                            sprintId = sprint.SprintId;
+                        }
+                    }
+
+                    if (existing is null)
+                    {
+                        _db.JiraIssues.Add(new JiraIssue
+                        {
+                            ProjectId = run.ProjectId,
+                            SprintId = sprintId,
+                            AssigneeUserId = assigneeUserId,
+
+                            IssueKey = key,
+                            Summary = summary,
+                            Description = it.Description,
+
+                            IssueType = it.IssueType,
+                            Priority = it.Priority,
+                            Status = it.Status,
+
+                            RawIssueType = it.RawIssueType,
+                            RawPriority = it.RawPriority,
+                            RawStatus = it.RawStatus,
+
+                            StoryPoints = it.StoryPoints,
+                            JiraUrl = it.Url,
+
+                            JiraCreatedAt = it.JiraCreatedAt,
+                            JiraUpdatedAt = it.JiraUpdatedAt,
+                            JiraResolvedAt = it.JiraResolvedAt,
+
+                            JiraAssigneeAccountId = it.AssigneeAccountId,
+                            JiraAssigneeDisplayName = it.AssigneeDisplayName,
+                            ParentIssueKey = it.ParentIssueKey,
+
+                            CreatedAt = now,
+                            UpdatedAt = now
+                        });
+
+                        inserted++;
+                    }
+                    else
+                    {
+                        existing.SprintId = sprintId;
+                        existing.AssigneeUserId = assigneeUserId;
+
+                        existing.Summary = summary;
+                        existing.Description = it.Description;
+
+                        existing.IssueType = it.IssueType;
+                        existing.Priority = it.Priority;
+                        existing.Status = it.Status;
+
+                        existing.RawIssueType = it.RawIssueType;
+                        existing.RawPriority = it.RawPriority;
+                        existing.RawStatus = it.RawStatus;
+
+                        existing.StoryPoints = it.StoryPoints;
+                        existing.JiraUrl = it.Url;
+
+                        existing.JiraCreatedAt = it.JiraCreatedAt;
+                        existing.JiraUpdatedAt = it.JiraUpdatedAt;
+                        existing.JiraResolvedAt = it.JiraResolvedAt;
+
+                        existing.JiraAssigneeAccountId = it.AssigneeAccountId;
+                        existing.JiraAssigneeDisplayName = it.AssigneeDisplayName;
+                        existing.ParentIssueKey = it.ParentIssueKey;
+
+                        existing.UpdatedAt = now;
+                        updated++;
+                    }
+                }
+
+                jiraCfg.LastJiraSyncAt = DateTime.UtcNow;
+                _db.ProjectIntegrations.Update(jiraCfg);
+
+                await _db.SaveChangesAsync(ct);
+
+                var note = $"SUCCESS - Scope={run.ScopeType}, Issues={issues.Count}, Inserted={inserted}, Updated={updated}, JQL={TrimMsg(jql, 300)}";
+                return new JiraSyncResult(true, TrimMsg(note, 1000));
+            }
+            catch (Exception ex)
+            {
+                return new JiraSyncResult(false, $"FAILED - {TrimMsg(ex.Message)}");
+            }
+        }
+
         private async Task<GitHubSyncResult> SyncGithubAsync(
             SyncRun run,
             ProjectIntegration? githubCfg,
@@ -96,57 +331,6 @@ namespace SWP391.Group2.Application.Features.Sync.Command
                             toUtc,
                             githubCfg.TokenEncrypted!,
                             ct);
-
-                            //if (commits.Count == 0)
-                            //{
-                            //    repoOk++;
-                            //    continue;
-                            //}
-
-                            //var commitShas = commits
-                            //    .Select(c => c.Sha)
-                            //    .Where(sha => !string.IsNullOrWhiteSpace(sha))
-                            //    .Distinct()
-                            //    .ToList();
-
-                            //var existingCommits = await _db.GitHubCommits
-                            //    .Where(x => x.RepoId == repo.RepoId && commitShas.Contains(x.CommitHash))
-                            //    .ToListAsync(ct);
-
-                            //var existingBySha = existingCommits
-                            //    .GroupBy(x => x.CommitHash)
-                            //    .ToDictionary(g => g.Key, g => g.First());
-
-                            //var newCommitEntities = new List<GitHubCommit>();
-
-                            //foreach (var c in commits)
-                            //{
-                            //    if (existingBySha.TryGetValue(c.Sha, out var existing))
-                            //    {
-                            //        skipped++;
-                            //        commitIdsForSnapshot.Add(existing.CommitId);
-                            //        continue;
-                            //    }
-
-                            //    int? userId = null;
-                            //    if (!string.IsNullOrWhiteSpace(c.AuthorLogin) &&
-                            //        githubAccountMap.TryGetValue(c.AuthorLogin, out var mappedUserId))
-                            //    {
-                            //        userId = mappedUserId;
-                            //    }
-
-                            //    var entity = new GitHubCommit
-                            //    {
-                            //        RepoId = repo.RepoId,
-                            //        UserId = userId,
-                            //        CommitHash = c.Sha,
-                            //        Message = c.Message.Length > 1000 ? c.Message[..1000] : c.Message,
-                            //        CommittedAt = c.CommittedAt,
-                            //        CommitUrl = c.Url
-                            //    };
-
-                            //    newCommitEntities.Add(entity);
-                            //}
 
                             if (commits.Count > 0)
                             {
@@ -440,145 +624,9 @@ namespace SWP391.Group2.Application.Features.Sync.Command
             // ---------- JIRA ----------
             if (jiraSelected)
             {
-                if (jiraCfg is null)
-                {
-                    jiraOk = false;
-                    jiraNote = "FAILED - Missing Jira integration config.";
-                }
-                else if (string.IsNullOrWhiteSpace(jiraCfg.BaseUrl) || string.IsNullOrWhiteSpace(jiraCfg.ProjectKey) || string.IsNullOrWhiteSpace(jiraCfg.TokenEncrypted))
-                {
-                    jiraOk = false;
-                    jiraNote = "FAILED - Jira config incomplete (baseUrl/projectKey/token).";
-                }
-                else
-                {
-                    try
-                    {
-                        if (FORCE_JIRA_FAIL) throw new Exception("Fake Jira connection failed.");
-
-                        var projectKey = jiraCfg.ProjectKey!.Trim();
-
-                        var jql = run.ScopeType switch
-                        {
-                            "BACKLOG" => $"project = {projectKey} AND sprint IS EMPTY ORDER BY updated DESC",
-                            "SPRINT" => $"project = {projectKey} AND sprint IS NOT EMPTY ORDER BY updated DESC",
-                            _ => $"project = {projectKey} ORDER BY updated DESC"
-                        };
-
-                        var issues = await _jira.SearchIssuesAsync(
-                            jiraCfg.BaseUrl!,
-                            jql,
-                            maxResults: 100,
-                            jiraCfg.TokenEncrypted!,
-                            ct
-                        );
-
-                        int inserted = 0;
-                        int updated = 0;
-
-                        foreach (var it in issues)
-                        {
-                            var key = (it.IssueKey ?? "").Trim().ToUpperInvariant();
-                            if (string.IsNullOrWhiteSpace(key)) continue;
-
-                            var existing = await _db.JiraIssues
-                                .FirstOrDefaultAsync(x => x.ProjectId == run.ProjectId && x.IssueKey == key, ct);
-
-                            var now = DateTime.UtcNow;
-
-                            var summary = (it.Summary ?? "").Trim();
-                            if (summary.Length > 500) summary = summary[..500];
-
-                            var issueType = MapIssueType(it.IssueType);
-                            var priority = MapPriority(it.Priority);
-                            var status = MapStatus(it.Status);
-
-                            if (existing is null)
-                            {
-                                _db.JiraIssues.Add(new JiraIssue
-                                {
-                                    ProjectId = run.ProjectId,
-                                    SprintId = null,          // chưa map sprint
-                                    AssigneeUserId = null,    // chưa map user
-                                    IssueKey = key,
-                                    Summary = summary,
-                                    Description = it.Description, // raw JSON ok
-                                    IssueType = issueType,
-                                    Priority = priority,
-                                    Status = status,
-                                    StoryPoints = it.StoryPoints,
-                                    JiraUrl = it.Url,
-                                    CreatedAt = now,
-                                    UpdatedAt = now
-                                });
-                                inserted++;
-                            }
-                            else
-                            {
-                                existing.Summary = summary;
-                                existing.Description = it.Description;
-                                existing.IssueType = issueType;
-                                existing.Priority = priority;
-                                existing.Status = status;
-                                existing.StoryPoints = it.StoryPoints;
-                                existing.JiraUrl = it.Url;
-                                existing.UpdatedAt = now;
-                                updated++;
-                            }
-                        }
-
-                        await _db.SaveChangesAsync(ct);
-
-                        jiraOk = true;
-                        jiraNote = $"SUCCESS - Inserted {inserted}, Updated {updated}.";
-                    }
-                    catch (Exception ex)
-                    {
-                        jiraOk = false;
-                        jiraNote = $"FAILED - {TrimMsg(ex.Message)}";
-                    }
-                }
-            }
-
-            static string MapStatus(string s)
-            {
-                s = (s ?? "").Trim().ToUpperInvariant();
-                return s switch
-                {
-                    "TO DO" or "TODO" => "TODO",
-                    "IN PROGRESS" => "IN_PROGRESS",
-                    "IN REVIEW" or "REVIEW" => "IN_REVIEW",
-                    "DONE" => "DONE",
-                    "BLOCKED" => "BLOCKED",
-                    _ => "TODO"
-                };
-            }
-
-            static string MapPriority(string s)
-            {
-                s = (s ?? "").Trim().ToUpperInvariant();
-                return s switch
-                {
-                    "LOW" => "LOW",
-                    "MEDIUM" => "MEDIUM",
-                    "HIGH" => "HIGH",
-                    "HIGHEST" => "HIGHEST",
-                    _ => "MEDIUM"
-                };
-            }
-
-            static string MapIssueType(string s)
-            {
-                s = (s ?? "").Trim().ToUpperInvariant();
-                return s switch
-                {
-                    "EPIC" => "EPIC",
-                    "STORY" => "STORY",
-                    "TASK" => "TASK",
-                    "BUG" => "BUG",
-                    "SUB-TASK" or "SUBTASK" => "SUBTASK",
-                    _ => "TASK"
-                };
+                var jiraResult = await SyncJiraAsync(run, jiraCfg, ct);
+                jiraOk = jiraResult.Ok;
+                jiraNote = jiraResult.Note;
             }
 
             // ---------- GITHUB ----------
@@ -591,23 +639,6 @@ namespace SWP391.Group2.Application.Features.Sync.Command
             }
 
             string linksNote = "N/A";
-
-            //if (jiraSelected && githubSelected && jiraOk && githubOk && snapshotId.HasValue)
-            //{
-            //    try
-            //    {
-            //        var (ok, note) = await BuildIssueCommitLinksAsync(snapshotId.Value, run.ProjectId, ct);
-            //        linksNote = ok ? note : $"FAILED - {note}";
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        linksNote = $"FAILED - {TrimMsg(ex.Message)}";
-            //    }
-            //}
-            //else if (jiraSelected && githubSelected)
-            //{
-            //    linksNote = "SKIPPED - Need both Jira and GitHub SUCCESS and a Snapshot.";
-            //}
 
             if (jiraSelected && githubSelected && jiraOk && githubOk && snapshotId.HasValue && run.SyncGithubCommits)
             {

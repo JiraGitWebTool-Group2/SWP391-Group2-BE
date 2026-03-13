@@ -32,6 +32,7 @@ namespace SWP391.Group2.Application.Abstractions
         DbSet<Role> Roles { get; }
         DbSet<GitHubPullRequest> GitHubPullRequests { get; }
         DbSet<SnapshotPullRequest> SnapshotPullRequests { get; }
+        DbSet<Sprint> Sprints { get; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }

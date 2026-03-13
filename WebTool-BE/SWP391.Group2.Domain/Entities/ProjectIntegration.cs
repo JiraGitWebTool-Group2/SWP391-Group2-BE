@@ -18,12 +18,18 @@ namespace SWP391.Group2.Domain.Entities
         public string? Org { get; set; }
         public string? TokenEncrypted { get; set; }
 
-        // New fields from updated DB
+        // existing extended fields
         public int? CreatedByUserId { get; set; }
         public string? LinkedAccount { get; set; }
         public string? VisibilityStatus { get; set; }
         public DateTime? LastVerifiedAt { get; set; }
         public string? VerificationNote { get; set; }
+
+        // phase 1 jira config fields
+        public string? JiraStoryPointsFieldKey { get; set; }
+        public string? JiraSprintFieldKey { get; set; }
+        public string? JiraBoardId { get; set; }
+        public DateTime? LastJiraSyncAt { get; set; }
 
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }

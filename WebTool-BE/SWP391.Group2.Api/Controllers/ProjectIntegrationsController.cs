@@ -57,7 +57,10 @@ namespace SWP391.Group2.Api.Controllers
                     req.LinkedAccount,
                     req.VisibilityStatus,
                     req.LastVerifiedAt,
-                    req.VerificationNote
+                    req.VerificationNote,
+                    req.JiraStoryPointsFieldKey,
+                    req.JiraSprintFieldKey,
+                    req.JiraBoardId
                 ), ct);
 
                 return Ok(ToApiDto(dto));
@@ -87,7 +90,10 @@ namespace SWP391.Group2.Api.Controllers
                     req.LinkedAccount,
                     req.VisibilityStatus,
                     req.LastVerifiedAt,
-                    req.VerificationNote
+                    req.VerificationNote,
+                    req.JiraStoryPointsFieldKey,
+                    req.JiraSprintFieldKey,
+                    req.JiraBoardId
                 ), ct);
 
                 var apiDto = ToApiDto(dto);
@@ -123,6 +129,10 @@ namespace SWP391.Group2.Api.Controllers
                 dto.VisibilityStatus,
                 dto.LastVerifiedAt,
                 dto.VerificationNote,
+                dto.JiraStoryPointsFieldKey,
+                dto.JiraSprintFieldKey,
+                dto.JiraBoardId,
+                dto.LastJiraSyncAt,
                 dto.CreatedAt,
                 dto.UpdatedAt
             );

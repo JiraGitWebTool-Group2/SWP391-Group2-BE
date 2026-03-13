@@ -15,6 +15,10 @@ namespace SWP391.Group2.Application.Features.Integrations.Commands
         string? LinkedAccount,
         string? VisibilityStatus,
         DateTime? LastVerifiedAt,
-        string? VerificationNote
+        string? VerificationNote,
+
+        string? JiraStoryPointsFieldKey,
+        string? JiraSprintFieldKey,
+        string? JiraBoardId
     ) : IRequest<IntegrationDto>;
 }
