@@ -103,5 +103,65 @@ namespace SWP391.Group2.Api.Controllers
             }
             catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
         }
+
+        [Authorize]
+        [HttpGet("/api/projects/{projectId:int}/snapshots")]
+        public async Task<IActionResult> GetProjectSnapshots(int projectId, CancellationToken ct)
+        {
+            try
+            {
+                var result = await _mediator.Send(new GetProjectSnapshotsQuery(projectId), ct);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpGet("{snapshotId:int}/summary")]
+        public async Task<IActionResult> GetSummary(int snapshotId, CancellationToken ct)
+        {
+            try
+            {
+                var result = await _mediator.Send(new GetSnapshotSummaryQuery(snapshotId), ct);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
+        [Authorize]
+        [HttpGet("{snapshotId:int}/tasks-progress")]
+        public async Task<IActionResult> GetTasksProgress(int snapshotId, CancellationToken ct)
+        {
+            try
+            {
+                var result = await _mediator.Send(new GetSnapshotTasksProgressQuery(snapshotId), ct);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpGet("{snapshotId:int}/member-activity")]
+        public async Task<IActionResult> GetMemberActivity(int snapshotId, CancellationToken ct)
+        {
+            try
+            {
+                var result = await _mediator.Send(new GetSnapshotMemberActivityQuery(snapshotId), ct);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
     }
 }
