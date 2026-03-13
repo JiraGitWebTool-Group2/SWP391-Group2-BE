@@ -23,7 +23,8 @@ namespace SWP391.Group2.Application.Features.Integrations.Commands
                 provider,
                 request.BaseUrl,
                 request.ProjectKey,
-                request.Org);
+                request.Org,
+                request.JiraBoardId);
 
             var projectExists = await _db.Projects
                 .AnyAsync(p => p.ProjectId == request.ProjectId, ct);
@@ -67,6 +68,13 @@ namespace SWP391.Group2.Application.Features.Integrations.Commands
             if (!string.IsNullOrWhiteSpace(request.Token))
                 entity.TokenEncrypted = request.Token.Trim();
 
+            if (provider == "JIRA")
+            {
+                entity.JiraStoryPointsFieldKey = NormalizeJiraFieldKey(request.JiraStoryPointsFieldKey, "customfield_10016");
+                entity.JiraSprintFieldKey = NormalizeJiraFieldKey(request.JiraSprintFieldKey, null);
+                entity.JiraBoardId = request.JiraBoardId?.Trim();
+            }
+
             _db.ProjectIntegrations.Add(entity);
             await _db.SaveChangesAsync(ct);
 
@@ -87,7 +95,8 @@ namespace SWP391.Group2.Application.Features.Integrations.Commands
             string provider,
             string? baseUrl,
             string? projectKey,
-            string? org)
+            string? org,
+            string? jiraBoardId)
         {
             if (provider == "JIRA")
             {
@@ -96,6 +105,9 @@ namespace SWP391.Group2.Application.Features.Integrations.Commands
 
                 if (string.IsNullOrWhiteSpace(projectKey))
                     throw new ArgumentException("Jira ProjectKey is required.");
+
+                if (!string.IsNullOrWhiteSpace(jiraBoardId) && jiraBoardId.Trim().Length > 50)
+                    throw new ArgumentException("JiraBoardId is too long.");
             }
 
             if (provider == "GITHUB")
@@ -103,6 +115,22 @@ namespace SWP391.Group2.Application.Features.Integrations.Commands
                 if (string.IsNullOrWhiteSpace(org))
                     throw new ArgumentException("GitHub Org is required.");
             }
+        }
+
+        private static string? NormalizeJiraFieldKey(string? value, string? defaultValue)
+        {
+            var v = string.IsNullOrWhiteSpace(value) ? defaultValue : value.Trim();
+
+            if (string.IsNullOrWhiteSpace(v))
+                return null;
+
+            if (v.StartsWith("customfield_", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(v, "story_points", StringComparison.OrdinalIgnoreCase))
+            {
+                return v;
+            }
+
+            throw new ArgumentException("Invalid Jira field key format.");
         }
 
         private static IntegrationDto ToDto(ProjectIntegration entity)
@@ -120,6 +148,10 @@ namespace SWP391.Group2.Application.Features.Integrations.Commands
                 entity.VisibilityStatus,
                 entity.LastVerifiedAt,
                 entity.VerificationNote,
+                entity.JiraStoryPointsFieldKey,
+                entity.JiraSprintFieldKey,
+                entity.JiraBoardId,
+                entity.LastJiraSyncAt,
                 entity.CreatedAt,
                 entity.UpdatedAt
             );

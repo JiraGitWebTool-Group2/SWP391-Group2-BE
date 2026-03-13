@@ -21,111 +21,188 @@ namespace SWP391.Group2.Infrastructure.Integrations.Jira
         public async Task<IReadOnlyList<JiraIssueDto>> SearchIssuesAsync(
             string baseUrl,
             string jql,
-            int maxResults,
             string token,
+            string? storyPointsFieldKey,
+            string? sprintFieldKey,
             CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(baseUrl)) throw new ArgumentException("baseUrl is required");
             if (string.IsNullOrWhiteSpace(jql)) throw new ArgumentException("jql is required");
             if (string.IsNullOrWhiteSpace(token)) throw new ArgumentException("token is required");
-            if (maxResults <= 0) maxResults = 50;
-            if (maxResults > 100) maxResults = 100; // Jira thường giới hạn 100/page
 
             baseUrl = baseUrl.TrimEnd('/');
+            storyPointsFieldKey = string.IsNullOrWhiteSpace(storyPointsFieldKey) ? "customfield_10016" : storyPointsFieldKey.Trim();
+            sprintFieldKey = string.IsNullOrWhiteSpace(sprintFieldKey) ? null : sprintFieldKey.Trim();
 
-            // Jira Cloud: /rest/api/3/search
-            // fields chọn vừa đủ để nhẹ payload
-            var fields = "summary,description,issuetype,priority,status,customfield_10016,assignee";
-            //var url =
-            //    $"{baseUrl}/rest/api/3/search" +
-            //    $"?jql={Uri.EscapeDataString(jql)}" +
-            //    $"&maxResults={maxResults}" +
-            //    $"&fields={Uri.EscapeDataString(fields)}";
+            var fields = new List<string>
+            {
+                "summary",
+                "description",
+                "issuetype",
+                "priority",
+                "status",
+                "assignee",
+                "created",
+                "updated",
+                "resolutiondate",
+                "parent"
+            };
+
+            if (!string.IsNullOrWhiteSpace(storyPointsFieldKey))
+                fields.Add(storyPointsFieldKey);
+
+            if (!string.IsNullOrWhiteSpace(sprintFieldKey))
+                fields.Add(sprintFieldKey);
+
+            var pageSize = 100;
+            var startAt = 0;
+            var results = new List<JiraIssueDto>();
+
+            while (true)
+            {
                 var url =
-                    $"{baseUrl}/rest/api/3/search/jql" +
+                    $"{baseUrl}/rest/api/3/search" +
                     $"?jql={Uri.EscapeDataString(jql)}" +
-                    $"&maxResults={maxResults}" +
-                    $"&fields={Uri.EscapeDataString(fields)}";
+                    $"&startAt={startAt}" +
+                    $"&maxResults={pageSize}" +
+                    $"&fields={Uri.EscapeDataString(string.Join(",", fields))}";
 
-            using var req = new HttpRequestMessage(HttpMethod.Get, url);
+                using var req = new HttpRequestMessage(HttpMethod.Get, url);
 
-            // token: với Jira Cloud thường là email:api_token (Basic)
-            // Nhưng ProjectIntegrations đang lưu token 1 cục, nên ta hỗ trợ 2 mode:
-            // - Nếu token có dấu ':' => coi như "email:apiToken" => Basic
-            // - Không có ':' => Bearer (cho self-hosted / PAT)
-            if (token.Contains(":"))
-            {
-                var basic = Convert.ToBase64String(Encoding.UTF8.GetBytes(token));
-                req.Headers.Authorization = new AuthenticationHeaderValue("Basic", basic);
-            }
-            else
-            {
-                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            }
-
-            req.Headers.Accept.ParseAdd("application/json");
-
-            using var res = await _http.SendAsync(req, ct);
-            var body = await res.Content.ReadAsStringAsync(ct);
-
-            if (!res.IsSuccessStatusCode)
-                throw new Exception($"Jira API failed: {(int)res.StatusCode} {res.ReasonPhrase}. Body: {Trim(body)}");
-
-            using var doc = JsonDocument.Parse(body);
-
-            var issuesEl = doc.RootElement.GetProperty("issues");
-            var list = new List<JiraIssueDto>();
-
-            foreach (var item in issuesEl.EnumerateArray())
-            {
-                var key = item.GetProperty("key").GetString() ?? "";
-
-                var selfUrl = item.TryGetProperty("self", out var selfProp) ? selfProp.GetString() : null;
-                var browseUrl = BuildBrowseUrl(baseUrl, key, selfUrl);
-
-                var fieldsEl = item.GetProperty("fields");
-
-                var summary = fieldsEl.TryGetProperty("summary", out var s) ? (s.GetString() ?? "") : "";
-
-                string? description = null;
-                // Jira description là Atlassian Document Format (ADF) -> JSON object
-                // Ta không cố “giải nén” text ở đây, lưu raw JSON string là safest.
-                if (fieldsEl.TryGetProperty("description", out var d) && d.ValueKind != JsonValueKind.Null)
-                    description = d.GetRawText();
-
-                var issueType = ExtractName(fieldsEl, "issuetype");
-                var priority = ExtractName(fieldsEl, "priority");
-                var status = ExtractName(fieldsEl, "status");
-
-                decimal? storyPoints = null;
-                // customfield_10016 thường là Story Points ở Jira Cloud, nhưng có thể khác instance.
-                // Nếu khác, sau này ta cho config field key trong ProjectIntegrations.
-                if (fieldsEl.TryGetProperty("customfield_10016", out var sp) && sp.ValueKind != JsonValueKind.Null)
+                if (token.Contains(":"))
                 {
-                    if (sp.ValueKind == JsonValueKind.Number && sp.TryGetDecimal(out var dec)) storyPoints = dec;
+                    var basic = Convert.ToBase64String(Encoding.UTF8.GetBytes(token));
+                    req.Headers.Authorization = new AuthenticationHeaderValue("Basic", basic);
+                }
+                else
+                {
+                    req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
                 }
 
-                string? assigneeAccountId = null;
-                if (fieldsEl.TryGetProperty("assignee", out var a) && a.ValueKind != JsonValueKind.Null)
+                req.Headers.Accept.ParseAdd("application/json");
+
+                using var res = await _http.SendAsync(req, ct);
+                var body = await res.Content.ReadAsStringAsync(ct);
+
+                if (!res.IsSuccessStatusCode)
+                    throw new Exception($"Jira API failed: {(int)res.StatusCode} {res.ReasonPhrase}. Body: {Trim(body)}");
+
+                using var doc = JsonDocument.Parse(body);
+                var root = doc.RootElement;
+
+                var issuesEl = root.GetProperty("issues");
+                var pageCount = 0;
+
+                foreach (var item in issuesEl.EnumerateArray())
                 {
-                    if (a.TryGetProperty("accountId", out var acc))
-                        assigneeAccountId = acc.GetString();
+                    pageCount++;
+
+                    var key = item.TryGetProperty("key", out var keyEl) ? keyEl.GetString() ?? "" : "";
+                    var browseUrl = BuildBrowseUrl(baseUrl, key);
+
+                    var fieldsEl = item.GetProperty("fields");
+
+                    var summary = fieldsEl.TryGetProperty("summary", out var s) ? s.GetString() ?? "" : "";
+
+                    string? description = null;
+                    if (fieldsEl.TryGetProperty("description", out var d) && d.ValueKind != JsonValueKind.Null)
+                        description = d.GetRawText();
+
+                    var rawIssueType = ExtractName(fieldsEl, "issuetype");
+                    var rawPriority = ExtractName(fieldsEl, "priority");
+                    var rawStatus = ExtractName(fieldsEl, "status");
+
+                    decimal? storyPoints = null;
+                    if (!string.IsNullOrWhiteSpace(storyPointsFieldKey)
+                        && fieldsEl.TryGetProperty(storyPointsFieldKey, out var sp)
+                        && sp.ValueKind != JsonValueKind.Null)
+                    {
+                        if (sp.ValueKind == JsonValueKind.Number && sp.TryGetDecimal(out var dec))
+                            storyPoints = dec;
+                    }
+
+                    string? assigneeAccountId = null;
+                    string? assigneeDisplayName = null;
+                    if (fieldsEl.TryGetProperty("assignee", out var a) && a.ValueKind != JsonValueKind.Null)
+                    {
+                        if (a.TryGetProperty("accountId", out var acc))
+                            assigneeAccountId = acc.GetString();
+
+                        if (a.TryGetProperty("displayName", out var dn))
+                            assigneeDisplayName = dn.GetString();
+                    }
+
+                    DateTime? jiraCreatedAt = ParseDateTime(fieldsEl, "created");
+                    DateTime? jiraUpdatedAt = ParseDateTime(fieldsEl, "updated");
+                    DateTime? jiraResolvedAt = ParseDateTime(fieldsEl, "resolutiondate");
+
+                    string? parentIssueKey = null;
+                    if (fieldsEl.TryGetProperty("parent", out var parentEl)
+                        && parentEl.ValueKind != JsonValueKind.Null
+                        && parentEl.TryGetProperty("key", out var parentKeyEl))
+                    {
+                        parentIssueKey = parentKeyEl.GetString();
+                    }
+
+                    string? sprintExternalId = null;
+                    string? sprintName = null;
+                    if (!string.IsNullOrWhiteSpace(sprintFieldKey)
+                        && fieldsEl.TryGetProperty(sprintFieldKey, out var sprintEl)
+                        && sprintEl.ValueKind != JsonValueKind.Null)
+                    {
+                        if (sprintEl.ValueKind == JsonValueKind.Object)
+                        {
+                            if (sprintEl.TryGetProperty("id", out var idEl))
+                                sprintExternalId = idEl.ToString();
+
+                            if (sprintEl.TryGetProperty("name", out var nameEl))
+                                sprintName = nameEl.GetString();
+                        }
+                        else if (sprintEl.ValueKind == JsonValueKind.Array)
+                        {
+                            var first = sprintEl.EnumerateArray().FirstOrDefault();
+                            if (first.ValueKind == JsonValueKind.Object)
+                            {
+                                if (first.TryGetProperty("id", out var idEl))
+                                    sprintExternalId = idEl.ToString();
+
+                                if (first.TryGetProperty("name", out var nameEl))
+                                    sprintName = nameEl.GetString();
+                            }
+                        }
+                    }
+
+                    results.Add(new JiraIssueDto(
+                        key,
+                        summary,
+                        description,
+                        NormalizeIssueType(rawIssueType),
+                        NormalizePriority(rawPriority),
+                        NormalizeStatus(rawStatus),
+                        rawIssueType,
+                        rawPriority,
+                        rawStatus,
+                        storyPoints,
+                        browseUrl,
+                        assigneeAccountId,
+                        assigneeDisplayName,
+                        jiraCreatedAt,
+                        jiraUpdatedAt,
+                        jiraResolvedAt,
+                        parentIssueKey,
+                        sprintExternalId,
+                        sprintName
+                    ));
                 }
 
-                list.Add(new JiraIssueDto(
-                    key,
-                    summary,
-                    description,
-                    issueType,
-                    priority,
-                    status,
-                    storyPoints,
-                    browseUrl,
-                    assigneeAccountId
-                ));
+                var total = root.TryGetProperty("total", out var totalEl) ? totalEl.GetInt32() : results.Count;
+                startAt += pageCount;
+
+                if (pageCount == 0 || startAt >= total)
+                    break;
             }
 
-            return list;
+            return results;
         }
 
         private static string ExtractName(JsonElement fieldsEl, string propName)
@@ -139,14 +216,63 @@ namespace SWP391.Group2.Infrastructure.Integrations.Jira
             return "";
         }
 
-        private static string BuildBrowseUrl(string baseUrl, string issueKey, string? selfUrl)
+        private static DateTime? ParseDateTime(JsonElement fieldsEl, string propName)
         {
-            // Jira Cloud thường browse link dạng: {baseUrl}/browse/{KEY}
-            // Self-hosted cũng thường vậy. Dùng cái này cho thống nhất.
-            return $"{baseUrl}/browse/{issueKey}";
+            if (!fieldsEl.TryGetProperty(propName, out var p) || p.ValueKind == JsonValueKind.Null)
+                return null;
+
+            var text = p.GetString();
+            if (DateTimeOffset.TryParse(text, out var dto))
+                return dto.UtcDateTime;
+
+            return null;
+        }
+
+        private static string BuildBrowseUrl(string baseUrl, string issueKey)
+            => $"{baseUrl}/browse/{issueKey}";
+
+        private static string NormalizeStatus(string s)
+        {
+            s = (s ?? "").Trim().ToUpperInvariant();
+            return s switch
+            {
+                "TO DO" or "TODO" => "TODO",
+                "IN PROGRESS" => "IN_PROGRESS",
+                "IN REVIEW" or "REVIEW" => "IN_REVIEW",
+                "DONE" => "DONE",
+                "BLOCKED" => "BLOCKED",
+                _ => "TODO"
+            };
+        }
+
+        private static string NormalizePriority(string s)
+        {
+            s = (s ?? "").Trim().ToUpperInvariant();
+            return s switch
+            {
+                "LOW" => "LOW",
+                "MEDIUM" => "MEDIUM",
+                "HIGH" => "HIGH",
+                "HIGHEST" => "HIGHEST",
+                _ => "MEDIUM"
+            };
+        }
+
+        private static string NormalizeIssueType(string s)
+        {
+            s = (s ?? "").Trim().ToUpperInvariant();
+            return s switch
+            {
+                "EPIC" => "EPIC",
+                "STORY" => "STORY",
+                "TASK" => "TASK",
+                "BUG" => "BUG",
+                "SUB-TASK" or "SUBTASK" => "SUBTASK",
+                _ => "TASK"
+            };
         }
 
         private static string Trim(string s)
-            => s.Length <= 300 ? s : s[..300];
+            => s.Length <= 500 ? s : s[..500];
     }
 }

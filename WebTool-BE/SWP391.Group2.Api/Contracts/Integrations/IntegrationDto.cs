@@ -1,15 +1,5 @@
 ﻿namespace SWP391.Group2.Api.Contracts.Integrations
 {
-    //public record IntegrationDto(
-    //    int ProjectId,
-    //    string Provider,
-    //    string? BaseUrl,
-    //    string? ProjectKey,
-    //    string? Org,
-    //    bool HasToken,           // không trả token ra
-    //    DateTime UpdatedAt
-    //);
-
     public record IntegrationDto(
         int IntegrationId,
         int ProjectId,
@@ -23,6 +13,12 @@
         string? VisibilityStatus,
         DateTime? LastVerifiedAt,
         string? VerificationNote,
+
+        string? JiraStoryPointsFieldKey,
+        string? JiraSprintFieldKey,
+        string? JiraBoardId,
+        DateTime? LastJiraSyncAt,
+
         DateTime CreatedAt,
         DateTime UpdatedAt
     );

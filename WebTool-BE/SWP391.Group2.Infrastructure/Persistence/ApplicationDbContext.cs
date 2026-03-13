@@ -41,6 +41,8 @@ namespace SWP391.Group2.Infrastructure.Persistence
         public DbSet<GitHubPullRequest> GitHubPullRequests => Set<GitHubPullRequest>();
         public DbSet<SnapshotPullRequest> SnapshotPullRequests => Set<SnapshotPullRequest>();
 
+        public DbSet<Sprint> Sprints => Set<Sprint>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -178,11 +180,17 @@ namespace SWP391.Group2.Infrastructure.Persistence
                 entity.Property(x => x.IncludeJira).HasColumnName("include_jira");
                 entity.Property(x => x.IncludeGithub).HasColumnName("include_github");
 
-                // GitHub sync options
-                entity.Property(x => x.GithubFrom).HasColumnName("github_from");
-                entity.Property(x => x.GithubTo).HasColumnName("github_to");
+                entity.Property(x => x.GithubFrom)
+                    .HasColumnName("github_from")
+                    .HasColumnType("datetime2(0)");
+
+                entity.Property(x => x.GithubTo)
+                    .HasColumnName("github_to")
+                    .HasColumnType("datetime2(0)");
+
                 entity.Property(x => x.SyncGithubCommits).HasColumnName("sync_github_commits");
                 entity.Property(x => x.SyncGithubPullRequests).HasColumnName("sync_github_pull_requests");
+
                 entity.Property(x => x.GithubSyncMode)
                     .HasColumnName("github_sync_mode")
                     .HasMaxLength(20);
@@ -192,9 +200,17 @@ namespace SWP391.Group2.Infrastructure.Persistence
                     .HasMaxLength(10)
                     .IsRequired();
 
-                entity.Property(x => x.StartedAt).HasColumnName("started_at");
-                entity.Property(x => x.FinishedAt).HasColumnName("finished_at");
-                entity.Property(x => x.Notes).HasColumnName("notes").HasMaxLength(1000);
+                entity.Property(x => x.StartedAt)
+                    .HasColumnName("started_at")
+                    .HasColumnType("datetime2(0)");
+
+                entity.Property(x => x.FinishedAt)
+                    .HasColumnName("finished_at")
+                    .HasColumnType("datetime2(0)");
+
+                entity.Property(x => x.Notes)
+                    .HasColumnName("notes")
+                    .HasMaxLength(1000);
 
                 entity.HasIndex(x => x.ProjectId)
                     .HasDatabaseName("IX_SyncRuns_project_id");
@@ -210,6 +226,11 @@ namespace SWP391.Group2.Infrastructure.Persistence
                 entity.HasOne(x => x.TriggeredByUser)
                     .WithMany()
                     .HasForeignKey(x => x.TriggeredByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.Sprint)
+                    .WithMany(s => s.SyncRuns)
+                    .HasForeignKey(x => x.SprintId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -237,20 +258,120 @@ namespace SWP391.Group2.Infrastructure.Persistence
                 entity.Property(x => x.ProjectId).HasColumnName("project_id");
                 entity.Property(x => x.SprintId).HasColumnName("sprint_id");
                 entity.Property(x => x.AssigneeUserId).HasColumnName("assignee_user_id");
-                entity.Property(x => x.IssueKey).HasColumnName("issue_key").HasMaxLength(50).IsRequired();
-                entity.Property(x => x.Summary).HasColumnName("summary").HasMaxLength(500).IsRequired();
-                entity.Property(x => x.Description).HasColumnName("description");
-                entity.Property(x => x.IssueType).HasColumnName("issue_type").HasMaxLength(30).IsRequired();
-                entity.Property(x => x.Priority).HasColumnName("priority").HasMaxLength(20).IsRequired();
-                entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(30).IsRequired();
-                entity.Property(x => x.StoryPoints).HasColumnName("story_points");
-                entity.Property(x => x.CreatedAt).HasColumnName("created_at");
-                entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
-                entity.Property(x => x.JiraUrl).HasColumnName("jira_url").HasMaxLength(500);
+
+                entity.Property(x => x.IssueKey)
+                    .HasColumnName("issue_key")
+                    .HasMaxLength(50)
+                    .IsRequired();
+
+                entity.Property(x => x.Summary)
+                    .HasColumnName("summary")
+                    .HasMaxLength(500)
+                    .IsRequired();
+
+                entity.Property(x => x.Description)
+                    .HasColumnName("description");
+
+                entity.Property(x => x.IssueType)
+                    .HasColumnName("issue_type")
+                    .HasMaxLength(30)
+                    .IsRequired();
+
+                entity.Property(x => x.Priority)
+                    .HasColumnName("priority")
+                    .HasMaxLength(20)
+                    .IsRequired();
+
+                entity.Property(x => x.Status)
+                    .HasColumnName("status")
+                    .HasMaxLength(30)
+                    .IsRequired();
+
+                entity.Property(x => x.RawIssueType)
+                    .HasColumnName("raw_issue_type")
+                    .HasMaxLength(100);
+
+                entity.Property(x => x.RawPriority)
+                    .HasColumnName("raw_priority")
+                    .HasMaxLength(100);
+
+                entity.Property(x => x.RawStatus)
+                    .HasColumnName("raw_status")
+                    .HasMaxLength(100);
+
+                entity.Property(x => x.StoryPoints)
+                    .HasColumnName("story_points")
+                    .HasColumnType("decimal(5,2)");
+
+                entity.Property(x => x.CreatedAt)
+                    .HasColumnName("created_at")
+                    .HasColumnType("datetime2(0)");
+
+                entity.Property(x => x.UpdatedAt)
+                    .HasColumnName("updated_at")
+                    .HasColumnType("datetime2(0)");
+
+                entity.Property(x => x.JiraCreatedAt)
+                    .HasColumnName("jira_created_at")
+                    .HasColumnType("datetime2(0)");
+
+                entity.Property(x => x.JiraUpdatedAt)
+                    .HasColumnName("jira_updated_at")
+                    .HasColumnType("datetime2(0)");
+
+                entity.Property(x => x.JiraResolvedAt)
+                    .HasColumnName("jira_resolved_at")
+                    .HasColumnType("datetime2(0)");
+
+                entity.Property(x => x.JiraUrl)
+                    .HasColumnName("jira_url")
+                    .HasMaxLength(500);
+
+                entity.Property(x => x.JiraAssigneeAccountId)
+                    .HasColumnName("jira_assignee_account_id")
+                    .HasMaxLength(255);
+
+                entity.Property(x => x.JiraAssigneeDisplayName)
+                    .HasColumnName("jira_assignee_display_name")
+                    .HasMaxLength(255);
+
+                entity.Property(x => x.ParentIssueKey)
+                    .HasColumnName("parent_issue_key")
+                    .HasMaxLength(50);
+
+                entity.HasIndex(x => x.ProjectId)
+                    .HasDatabaseName("IX_JiraIssues_project_id");
+
+                entity.HasIndex(x => x.SprintId)
+                    .HasDatabaseName("IX_JiraIssues_sprint_id");
+
+                entity.HasIndex(x => x.AssigneeUserId)
+                    .HasDatabaseName("IX_JiraIssues_assignee");
+
+                entity.HasIndex(x => new { x.ProjectId, x.IssueKey })
+                    .IsUnique()
+                    .HasDatabaseName("UQ_JiraIssues_project_key");
+
+                entity.HasIndex(x => x.JiraUpdatedAt)
+                    .HasDatabaseName("IX_JiraIssues_jira_updated_at");
+
+                entity.HasIndex(x => new { x.ProjectId, x.ParentIssueKey })
+                    .HasDatabaseName("IX_JiraIssues_parent_issue_key");
 
                 entity.HasOne(x => x.Project)
                     .WithMany(p => p.JiraIssues)
-                    .HasForeignKey(x => x.ProjectId);
+                    .HasForeignKey(x => x.ProjectId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.Sprint)
+                    .WithMany(s => s.JiraIssues)
+                    .HasForeignKey(x => x.SprintId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.AssigneeUser)
+                    .WithMany()
+                    .HasForeignKey(x => x.AssigneeUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<Repository>(entity =>
@@ -361,17 +482,36 @@ namespace SWP391.Group2.Infrastructure.Persistence
                     .HasMaxLength(20);
 
                 e.Property(x => x.LastVerifiedAt)
-                    .HasColumnName("last_verified_at");
+                    .HasColumnName("last_verified_at")
+                    .HasColumnType("datetime2(0)");
 
                 e.Property(x => x.VerificationNote)
                     .HasColumnName("verification_note")
                     .HasMaxLength(500);
 
+                e.Property(x => x.JiraStoryPointsFieldKey)
+                    .HasColumnName("jira_story_points_field_key")
+                    .HasMaxLength(100);
+
+                e.Property(x => x.JiraSprintFieldKey)
+                    .HasColumnName("jira_sprint_field_key")
+                    .HasMaxLength(100);
+
+                e.Property(x => x.JiraBoardId)
+                    .HasColumnName("jira_board_id")
+                    .HasMaxLength(50);
+
+                e.Property(x => x.LastJiraSyncAt)
+                    .HasColumnName("last_jira_sync_at")
+                    .HasColumnType("datetime2(0)");
+
                 e.Property(x => x.CreatedAt)
-                    .HasColumnName("created_at");
+                    .HasColumnName("created_at")
+                    .HasColumnType("datetime2(0)");
 
                 e.Property(x => x.UpdatedAt)
-                    .HasColumnName("updated_at");
+                    .HasColumnName("updated_at")
+                    .HasColumnType("datetime2(0)");
 
                 e.HasIndex(x => x.ProjectId)
                     .HasDatabaseName("IX_ProjectIntegrations_project_id");
@@ -664,6 +804,55 @@ namespace SWP391.Group2.Infrastructure.Persistence
                 entity.HasOne(x => x.PullRequest)
                     .WithMany(x => x.SnapshotPullRequests)
                     .HasForeignKey(x => x.PullRequestId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Sprint>(entity =>
+            {
+                entity.ToTable("Sprints", "dbo");
+                entity.HasKey(x => x.SprintId);
+
+                entity.Property(x => x.SprintId).HasColumnName("sprint_id");
+
+                entity.Property(x => x.ProjectId)
+                    .HasColumnName("project_id");
+
+                entity.Property(x => x.JiraSprintId)
+                    .HasColumnName("jira_sprint_id")
+                    .HasMaxLength(50);
+
+                entity.Property(x => x.SprintName)
+                    .HasColumnName("sprint_name")
+                    .HasMaxLength(200)
+                    .IsRequired();
+
+                entity.Property(x => x.StartDate)
+                    .HasColumnName("start_date")
+                    .HasColumnType("date");
+
+                entity.Property(x => x.EndDate)
+                    .HasColumnName("end_date")
+                    .HasColumnType("date");
+
+                entity.Property(x => x.CreatedAt)
+                    .HasColumnName("created_at")
+                    .HasColumnType("datetime2(0)");
+
+                entity.HasIndex(x => x.ProjectId)
+                    .HasDatabaseName("IX_Sprints_project_id");
+
+                entity.HasIndex(x => new { x.ProjectId, x.SprintName })
+                    .IsUnique()
+                    .HasDatabaseName("UQ_Sprints_project_name");
+
+                entity.HasIndex(x => new { x.ProjectId, x.JiraSprintId })
+                    .IsUnique()
+                    .HasFilter("[jira_sprint_id] IS NOT NULL")
+                    .HasDatabaseName("UX_Sprints_project_jira_sprint_id");
+
+                entity.HasOne(x => x.Project)
+                    .WithMany()
+                    .HasForeignKey(x => x.ProjectId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }

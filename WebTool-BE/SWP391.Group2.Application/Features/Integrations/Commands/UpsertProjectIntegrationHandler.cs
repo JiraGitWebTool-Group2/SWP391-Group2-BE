@@ -131,6 +131,10 @@ namespace SWP391.Group2.Application.Features.Integrations.Commands
                 entity.VisibilityStatus,
                 entity.LastVerifiedAt,
                 entity.VerificationNote,
+                entity.JiraStoryPointsFieldKey,
+                entity.JiraSprintFieldKey,
+                entity.JiraBoardId,
+                entity.LastJiraSyncAt,
                 entity.CreatedAt,
                 entity.UpdatedAt
             );

@@ -39,6 +39,7 @@ namespace SWP391.Group2.Domain.Entities
         // Navigation
         public Project Project { get; set; } = default!;
         public User? TriggeredByUser { get; set; }
+        public Sprint? Sprint { get; set; }
         public ICollection<Snapshot> Snapshots { get; set; } = new List<Snapshot>();
     }
 

@@ -10,6 +10,10 @@
         string? LinkedAccount,
         string? VisibilityStatus,
         DateTime? LastVerifiedAt,
-        string? VerificationNote
+        string? VerificationNote,
+
+        string? JiraStoryPointsFieldKey,
+        string? JiraSprintFieldKey,
+        string? JiraBoardId
     );
 }
