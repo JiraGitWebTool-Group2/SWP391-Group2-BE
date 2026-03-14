@@ -4,7 +4,12 @@ public sealed class IntegratedGroupDto
 {
     public int GroupId { get; set; }
     public string GroupName { get; set; } = string.Empty;
+
+    public int? ClassId { get; set; }
+    public string? ClassCode { get; set; }
+
     public int ProjectId { get; set; }
     public string ProjectName { get; set; } = string.Empty;
+
     public List<string> Integrations { get; set; } = new();
 }

@@ -97,6 +97,26 @@ namespace SWP391.Group2.Api.Controllers
                 return NotFound(new { message = ex.Message });
             }
         }
+
+        [Authorize]
+        [HttpGet("me/group")]
+        public async Task<IActionResult> GetMyGroup(CancellationToken ct)
+        {
+            var idStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(idStr, out var userId))
+                return Unauthorized(new { message = "Invalid token." });
+
+            try
+            {
+                var dto = await _mediator.Send(new GetMyGroupQuery(userId), ct);
+                return Ok(dto);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
     }
 
 
