@@ -23,10 +23,14 @@ public sealed class GetIntegratedGroupsHandler
             (from g in _context.Groups
              join p in _context.Projects on g.GroupId equals p.GroupId
              join pi in _context.ProjectIntegrations on p.ProjectId equals pi.ProjectId
+             join c in _context.Classes on g.ClassId equals c.ClassId into classJoin
+             from c in classJoin.DefaultIfEmpty()
              select new
              {
                  g.GroupId,
                  g.GroupName,
+                 g.ClassId,
+                 ClassCode = c != null ? c.ClassCode : null,
                  p.ProjectId,
                  p.ProjectName,
                  pi.Provider
@@ -38,6 +42,8 @@ public sealed class GetIntegratedGroupsHandler
             {
                 x.GroupId,
                 x.GroupName,
+                x.ClassId,
+                x.ClassCode,
                 x.ProjectId,
                 x.ProjectName
             })
@@ -45,6 +51,8 @@ public sealed class GetIntegratedGroupsHandler
             {
                 GroupId = x.Key.GroupId,
                 GroupName = x.Key.GroupName,
+                ClassId = x.Key.ClassId,
+                ClassCode = x.Key.ClassCode,
                 ProjectId = x.Key.ProjectId,
                 ProjectName = x.Key.ProjectName,
                 Integrations = x
