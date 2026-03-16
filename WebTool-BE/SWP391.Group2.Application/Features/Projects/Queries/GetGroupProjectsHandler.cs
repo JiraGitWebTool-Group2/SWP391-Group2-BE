@@ -20,8 +20,8 @@ namespace SWP391.Group2.Application.Features.Projects.Queries
                 .Where(p => p.GroupId == request.GroupId)
                 .OrderByDescending(p => p.ProjectId)
                 .Select(p => new ProjectDto(
-                    p.ProjectId, p.GroupId, p.ProjectName,
-                    p.JiraProjectKey, p.GithubOrg, p.Description, p.CreatedAt
+                    p.ProjectId, p.GroupId, p.ProjectName, p.ProjectCode,
+                     p.Description, p.CreatedAt, p.Requirement
                 ))
                 .ToListAsync(ct);
         }

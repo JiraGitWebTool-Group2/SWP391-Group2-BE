@@ -3,9 +3,9 @@
     public record ProjectDto(
         int ProjectId,
         int GroupId,
+        string ProjectCode,
         string ProjectName,
-        string? JiraProjectKey,
-        string? GithubOrg,
+        string? Requirement,
         string? Description,
         DateTime CreatedAt
     );

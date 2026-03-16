@@ -4,9 +4,10 @@
         int ProjectId,
         int GroupId,
         string ProjectName,
-        string? JiraProjectKey,
-        string? GithubOrg,
+        string ProjectCode,
+
         string? Description,
-        DateTime CreatedAt
+        DateTime CreatedAt,
+        string? Requirement
     );
 }

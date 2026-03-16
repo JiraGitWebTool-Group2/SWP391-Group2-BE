@@ -30,10 +30,10 @@ namespace SWP391.Group2.Application.Features.Projects.Commands
             var entity = new Project
             {
                 GroupId = request.GroupId,
-                ProjectName = name,
-                JiraProjectKey = string.IsNullOrWhiteSpace(request.JiraProjectKey) ? null : request.JiraProjectKey.Trim(),
-                GithubOrg = string.IsNullOrWhiteSpace(request.GithubOrg) ? null : request.GithubOrg.Trim(),
+                ProjectCode = request.ProjectCode,
+                ProjectName = request.ProjectName,
                 Description = request.Description,
+                Requirement = request.Requirement,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -41,8 +41,8 @@ namespace SWP391.Group2.Application.Features.Projects.Commands
             await _db.SaveChangesAsync(ct);
 
             return new ProjectDto(
-                entity.ProjectId, entity.GroupId, entity.ProjectName,
-                entity.JiraProjectKey, entity.GithubOrg, entity.Description, entity.CreatedAt
+                entity.ProjectId, entity.GroupId, entity.ProjectCode, entity.ProjectName,
+                entity.Description, entity.CreatedAt, entity.Requirement
             );
         }
     }
