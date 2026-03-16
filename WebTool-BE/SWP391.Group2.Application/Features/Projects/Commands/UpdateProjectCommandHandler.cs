@@ -26,7 +26,7 @@ namespace SWP391.Group2.Application.Features.Projects.Commands
             if (project == null)
                 throw new KeyNotFoundException("Project not found");
 
-            project.ProjectCode = request.ProjectCode;
+            //project.ProjectCode = request.ProjectCode;
             project.ProjectName = request.ProjectName;
             project.Description = request.Description;
             project.Requirement = request.Requirement;
