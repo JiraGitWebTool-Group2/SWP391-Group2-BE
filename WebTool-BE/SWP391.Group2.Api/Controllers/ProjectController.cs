@@ -24,8 +24,8 @@ namespace SWP391.Group2.Api.Controllers
                 var list = await _mediator.Send(new GetGroupProjectsQuery(groupId), ct);
 
                 var res = list.Select(p => new ProjectDto(
-                    p.ProjectId, p.GroupId, p.ProjectName,
-                    p.JiraProjectKey, p.GithubOrg, p.Description, p.CreatedAt
+                    p.ProjectId, p.GroupId, p.ProjectCode, p.ProjectName, p.Requirement,
+                     p.Description, p.CreatedAt
                 ));
 
                 return Ok(res);
@@ -45,12 +45,11 @@ namespace SWP391.Group2.Api.Controllers
             try
             {
                 var dto = await _mediator.Send(new CreateProjectInGroupCommand(
-                    groupId, req.ProjectName, req.JiraProjectKey, req.GithubOrg, req.Description
+                    groupId, req.ProjectCode, req.ProjectName, req.Description, req.Requirement
                 ), ct);
 
                 var apiDto = new ProjectDto(
-                    dto.ProjectId, dto.GroupId, dto.ProjectName,
-                    dto.JiraProjectKey, dto.GithubOrg, dto.Description, dto.CreatedAt
+                    dto.ProjectId, dto.GroupId, dto.ProjectCode, dto.ProjectName, dto.Requirement, dto.Description, dto.CreatedAt
                 );
 
                 return StatusCode(StatusCodes.Status201Created, apiDto);
@@ -68,5 +67,53 @@ namespace SWP391.Group2.Api.Controllers
 
         //    return Ok(result);
         //}
+
+        [Authorize]
+        [HttpPut("{projectId:int}")]
+        public async Task<IActionResult> Update(
+        int groupId,
+        int projectId,
+        [FromBody] UpdateProjectRequest req,
+        CancellationToken ct)
+        {
+            try
+            {
+                var result = await _mediator.Send(
+                    new UpdateProjectCommand(
+                        projectId,
+                        req.ProjectCode,
+                        req.ProjectName,
+                        req.Description,
+                        req.Requirement
+                    ), ct);
+
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
+        [Authorize]
+        [HttpDelete("{projectId:int}")]
+        public async Task<IActionResult> Delete(int projectId, CancellationToken ct)
+        {
+            try
+            {
+                await _mediator.Send(new DeleteProjectCommand(projectId), ct);
+
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
     }
 }

@@ -31,10 +31,13 @@ namespace SWP391.Group2.Application.Features.Groups.Commands
 
             // Check duplicate group name
             var exists = await _db.Groups
-                .AnyAsync(g => g.GroupName == name, cancellationToken);
+                .AnyAsync(g =>
+                    g.ClassId == request.ClassId &&
+                    g.GroupName.ToLower() == name.ToLower(),
+                    cancellationToken);
 
             if (exists)
-                throw new InvalidOperationException("Group name already exists.");
+                throw new InvalidOperationException("Group name already exists in this class.");
 
             // Tạo group
             var entity = new Group

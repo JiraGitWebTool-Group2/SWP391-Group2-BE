@@ -87,6 +87,40 @@ namespace SWP391.Group2.Api.Controllers
                 return Conflict(ex.Message);
             }
         }
-       
+
+        [HttpDelete("{groupId:int}")]
+        public async Task<IActionResult> Delete(int groupId)
+        {
+            var result = await _mediator.Send(new DeleteGroupCommand(groupId));
+
+            if (!result)
+                return NotFound($"Group with ID {groupId} not found.");
+
+            return NoContent();
+        }
+
+        [HttpDelete("{groupId:int}/students/{userId:int}")]
+        public async Task<IActionResult> RemoveStudentFromGroup(
+        int groupId,
+        int userId,
+        CancellationToken cancellationToken)
+        {
+            try
+            {
+                var result = await _mediator.Send(
+                    new RemoveStudentFromGroupCommand(groupId, userId),
+                    cancellationToken
+                );
+
+                if (!result)
+                    return NotFound("Student not found in group");
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
     }
 }

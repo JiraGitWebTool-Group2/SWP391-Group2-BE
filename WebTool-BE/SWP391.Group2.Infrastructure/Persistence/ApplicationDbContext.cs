@@ -139,7 +139,7 @@ namespace SWP391.Group2.Infrastructure.Persistence
                 //    .WithMany()
                 //    .HasForeignKey(x => x.RoleId)
                 //    .OnDelete(DeleteBehavior.Restrict);
-            }); 
+            });
 
 
             modelBuilder.Entity<Project>(entity =>
@@ -150,9 +150,8 @@ namespace SWP391.Group2.Infrastructure.Persistence
 
                 entity.Property(x => x.ProjectId).HasColumnName("project_id");
                 entity.Property(x => x.GroupId).HasColumnName("group_id");
+                entity.Property(x => x.ProjectCode).HasColumnName("project_code").HasMaxLength(200).IsRequired();
                 entity.Property(x => x.ProjectName).HasColumnName("project_name").HasMaxLength(200).IsRequired();
-                entity.Property(x => x.JiraProjectKey).HasColumnName("jira_project_key").HasMaxLength(50);
-                entity.Property(x => x.GithubOrg).HasColumnName("github_org").HasMaxLength(200);
                 entity.Property(x => x.Description).HasColumnName("description").HasMaxLength(1000);
                 entity.Property(x => x.CreatedAt).HasColumnName("created_at");
             });
