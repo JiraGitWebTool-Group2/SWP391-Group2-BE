@@ -16,6 +16,7 @@ namespace SWP391.Group2.Domain.Entities
         public string IssueKey { get; set; } = default!;
         public string Summary { get; set; } = default!;
         public string? Description { get; set; }
+        public DateOnly? DueDate { get; set; }  
 
         // normalized values
         public string IssueType { get; set; } = default!;

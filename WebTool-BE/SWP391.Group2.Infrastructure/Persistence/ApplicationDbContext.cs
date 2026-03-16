@@ -257,6 +257,7 @@ namespace SWP391.Group2.Infrastructure.Persistence
                 entity.Property(x => x.ProjectId).HasColumnName("project_id");
                 entity.Property(x => x.SprintId).HasColumnName("sprint_id");
                 entity.Property(x => x.AssigneeUserId).HasColumnName("assignee_user_id");
+                entity.Property(x => x.DueDate).HasColumnName("due_date");
 
                 entity.Property(x => x.IssueKey)
                     .HasColumnName("issue_key")
